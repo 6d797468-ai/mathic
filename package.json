@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/build-sw.mjs",
     "preview": "vite preview",
-    "test": "node --test && node tests/playtest-puzzle.mjs",
+    "test": "node --test tests/*.test.mjs && node tests/playtest-puzzle.mjs",
     "serve:https": "node scripts/https-server.mjs",
     "audit:size": "node scripts/audit-size.mjs",
     "gen:icons": "node scripts/gen-icons.mjs",
     "gen:android": "node scripts/generate-android-icons.mjs",
-    "build:android": "vite build && npx cap copy android",
+    "gen:model-manifest": "node scripts/generate-model-manifest.mjs",
+    "build:android": "vite build && node scripts/build-sw.mjs && npx cap copy android",
     "android:sync": "npx cap sync android"
   },
   "devDependencies": {
