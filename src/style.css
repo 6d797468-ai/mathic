@@ -187,7 +187,8 @@ h1 {
 #btn-profile,
 #btn-fs,
 #btn-audio,
-#btn-install {
+#btn-install,
+#btn-tut-reset {
   min-height: 48px;
   padding: 0 16px;
   font-size: 18px;
@@ -214,7 +215,8 @@ body[data-mode='puzzle'] #btn-undo {
 #btn-profile:active,
 #btn-fs:active,
 #btn-audio:active,
-#btn-install:active {
+#btn-install:active,
+#btn-tut-reset:active {
   transform: scale(0.94);
 }
 
@@ -224,7 +226,8 @@ body[data-mode='puzzle'] #btn-undo {
 #btn-profile:hover,
 #btn-fs:hover,
 #btn-audio:hover,
-#btn-install:hover {
+#btn-install:hover,
+#btn-tut-reset:hover {
   background: #2e3350;
 }
 
@@ -701,6 +704,46 @@ body.fullscreen #operator-bar {
 #grid.screen-shake-strong {
   animation: screen-shake-strong-kf 0.45s ease-in-out;
 }
+
+/* --- Tutoriel FTUE (Phase 3) -------------------------------------------
+
+   Calque sombre plein écran ; les « trous de lumière » (le bouton + et les
+   tuiles 2/3) sont découpés par clip-path posé dynamiquement par JS. Le
+   calque est purement visuel (pointer-events: none) : le verrouillage des
+   autres interactions est assuré par la logique de main.js. */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 12, 18, 0.72);
+  pointer-events: none;
+  z-index: 9;
+}
+
+/* Main fantôme 👆 : montre le geste exact à reproduire. */
+.tut-hand {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 9;
+  font-size: 34px;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
+}
+
+/* Tap répété sur point (bouton d'opérateur) — keyframes statiques. */
+@keyframes tut-hand-tap {
+  0% { transform: translateY(4px) scale(1); opacity: 0; }
+  12% { opacity: 1; transform: translateY(4px) scale(1); }
+  28% { transform: translateY(10px) scale(0.84); }
+  44% { transform: translateY(0px) scale(1.12); }
+  58% { transform: translateY(8px) scale(0.9); }
+  72% { transform: translateY(0px) scale(1.06); }
+  90% { opacity: 1; }
+  100% { transform: translateY(4px) scale(1); opacity: 0; }
+}
+/* Le glissement 2→3 compile ses keyframes aux coordonnées réelles (JS). */
 
 /* --- Panneau du coach IA ---------------------------------------- */
 
