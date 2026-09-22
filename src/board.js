@@ -14,6 +14,10 @@
  * Exemples : 5 glisse sur 2 → 3 ; 2 glisse sur 5 → invalide.
  * 6 glisse sur 3 → 2 ; 3 glisse sur 6 → invalide.
  *
+ * V3 « Effondrement » : toute fusion dont le résultat dépasserait
+ * VALUE_CAP (999) est REFUSÉE (VALUE_CAP, isValidMerge) — le joueur doit
+ * réduire (÷, −) plutôt que gonfler les nombres indéfiniment.
+ *
  * Une tuile ne fusionne qu'UNE fois par coup (héritage Phase 2).
  * La paire destination-side fusionne en priorité.
  *
@@ -30,6 +34,21 @@ export const OPERATORS = {
   mul: '×',
   div: '÷',
 };
+
+/**
+ * V3 « Effondrement » : nombre cible du mode libre. Une tuile qui atteint
+ * EXACTEMENT cette valeur explose (disparaît + gros bonus) et libère la
+ * case — c'est LA boucle éducative : le joueur joue les 4 opérateurs pour
+ * amener précisément des tuiles sur la cible (ex. 48 ÷ 2 = 24).
+ */
+export const TARGET_NUMBER = 24;
+
+/**
+ * Plafond des valeurs : toute fusion dont le résultat dépasserait cet
+ * entier est REFUSÉE (les tuiles glissent sans se fondre). Au-delà, le
+ * joueur DOIT réduire (÷, −) plutôt que gonfler sans fin.
+ */
+export const VALUE_CAP = 999;
 
 /**
  * Crée une grille vide rows x cols.
@@ -137,6 +156,18 @@ export function computeMerge(a, b, op) {
   }
 }
 
+/**
+ * Valide une paire ET le respect du plafond (VALUE_CAP) : une fusion dont
+ * le résultat dépasserait le plafond est refusée (blocage V3).
+ * @param {number} a tuile arrivante
+ * @param {number} b tuile percutée
+ * @param {'add'|'sub'|'mul'|'div'} op
+ * @returns {boolean}
+ */
+export function isValidMerge(a, b, op) {
+  return isValidPair(a, b, op) && computeMerge(a, b, op) <= VALUE_CAP;
+}
+
 // --- Glissement ------------------------------------------------------------
 
 /**
@@ -187,7 +218,7 @@ export function slideLine(line, op) {
     const hit = tiles[i]; // devant, côté destination — c'est B
     const arriving = i + 1 < tiles.length ? tiles[i + 1] : null; // derrière — c'est A
 
-    if (arriving !== null && isValidPair(arriving.value, hit.value, op)) {
+    if (arriving !== null && isValidMerge(arriving.value, hit.value, op)) {
       const result = computeMerge(arriving.value, hit.value, op);
       values.push(result); // le résultat prend la place de B (devant)
       mergedFlags.push(true);
@@ -207,7 +238,7 @@ export function slideLine(line, op) {
       const arrivingMergesBehind =
         arriving !== null &&
         nextOfArriving !== null &&
-        isValidPair(nextOfArriving, arriving.value, op);
+        isValidMerge(nextOfArriving, arriving.value, op);
       invalidContactFlags.push(arriving !== null && !arrivingMergesBehind);
     }
   }
@@ -349,9 +380,9 @@ export function hasAnyMove(board, op) {
       // Voisin de droite : v peut glisser dessus (v [op] droite), ou
       // glisser sur v (droite [op] v) selon le sens du swipe.
       if (c + 1 < board[r].length && board[r][c + 1] !== null &&
-          (isValidPair(v, board[r][c + 1], op) || isValidPair(board[r][c + 1], v, op))) return true;
+          (isValidMerge(v, board[r][c + 1], op) || isValidMerge(board[r][c + 1], v, op))) return true;
       if (r + 1 < board.length && board[r + 1][c] !== null &&
-          (isValidPair(v, board[r + 1][c], op) || isValidPair(board[r + 1][c], v, op))) return true;
+          (isValidMerge(v, board[r + 1][c], op) || isValidMerge(board[r + 1][c], v, op))) return true;
     }
   }
   return false;

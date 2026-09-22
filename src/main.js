@@ -5,7 +5,8 @@
  *  1. slideBoard        → modèle mis à jour + trajectoires (moves)
  *  2. tiles.slide       → les tuiles glissent, les fusions convergent
  *  3. tiles.shake       → feedback des contacts invalides
- *  4. processTargets    → explosion des tuiles-objectif, bonus, nouvelle cible
+ *  4. processTargets    → explosion des tuiles-objectif (cible fixe 24),
+ *                         bonus massif (V3 Effondrement)
  *  5. spawn + tiles.sync → nouvelle tuile (pop), surbrillance, HUD
  *  6. game over check
  *
@@ -36,7 +37,6 @@ import {
 } from './ui.js';
 import { onDirection } from './input.js';
 import {
-  pickTarget,
   consumeTargetTiles,
   findTargetPairs,
   findTargetHint,
@@ -71,6 +71,7 @@ import {
   TUTORIAL_CELL_A,
   TUTORIAL_CELL_B,
 } from './tutorial.js';
+import { TARGET_NUMBER } from './board.js';
 
 // Couleurs d'opérateur (miroir des règles .op-btn[data-op]) : récompenses
 // visuelles V2 (confettis, textes flottants) teintées par l'op choisi.
@@ -88,7 +89,6 @@ let score = 0;
 let best = Number(migrateOldKeys() || 0);
 let target = 0;
 let targetCount = 0;
-let recentTargets = [];
 let idleTimer = null;
 let hintLock = false;
 /** @type {ReturnType<typeof createTileManager>|null} */
@@ -168,8 +168,8 @@ function migrateOldKeys() {
   return localStorage.getItem('mathic_record') || 0;
 }
 
-const TARGET_BONUS = 50; // points par cible atteinte
-const HIT_BONUS = 10; // points par tuile-cible supplémentaire (multi-explosion)
+const TARGET_BONUS = 500; // V3 : bonus massif par tuile effondrée (= 24)
+const HIT_BONUS = 100; // points par tuile-cible supplémentaire (multi-explosion)
 
 // --- Coach : affichage --------------------------------------------------------
 
@@ -265,7 +265,6 @@ function newGame() {
   score = 0;
   busy = false;
   targetCount = 0;
-  recentTargets = [];
   calvados.clear();
   chainTracker.reset();
   moveIndex = 0;
@@ -280,8 +279,9 @@ function newGame() {
 
   // Équilibrage (roadmap 1.2) : tuiles initiales ET spawn dans [1..5].
   fillInitialTiles(board, Math.max(4, cols), PUZZLE_STARTER_MAX);
-  target = pickTarget(board, recentTargets);
-  recentTargets.push(target);
+  // V3 « Effondrement » : cible FIXE (24) — les tuiles qui l'atteignent
+  // explosent et libèrent la case. Le joueur jongle avec les 4 opérateurs.
+  target = TARGET_NUMBER;
 
   updateHud();
   tiles.sync(board, targetValueCells());
@@ -319,7 +319,8 @@ function targetValueCells() {
 
 /**
  * Traite les explosions : consomme les tuiles égales à la cible, attribue
- * les bonus, puis enchaîne sur une nouvelle cible.
+ * les bonus. En mode libre la cible est FIXE (TARGET_NUMBER) — elle ne
+ * change jamais ; seul le mode puzzle impose une cible par coup.
  */
 function processTargets() {
   const consumed = consumeTargetTiles(board, target);
@@ -328,15 +329,6 @@ function processTargets() {
   const bonus = TARGET_BONUS + (consumed.length - 1) * HIT_BONUS;
   score += bonus;
   targetCount += consumed.length;
-
-  // En mode puzzle, la cible est unique : pas de re-tirage.
-  if (mode === 'puzzle') return { exploded: consumed, bonus };
-
-  // Nouvelle cible : évite de reprendre la même immédiatement.
-  const next = pickTarget(board, recentTargets);
-  recentTargets.push(next);
-  if (recentTargets.length > 5) recentTargets.shift();
-  target = next;
 
   return { exploded: consumed, bonus };
 }
@@ -586,7 +578,6 @@ function startPuzzle() {
   board = createBoard(rows, cols);
   score = 0;
   targetCount = 0;
-  recentTargets = [];
   busy = true; // génération BFS en cours
 
   buildGrid(gridElement, rows, cols);
@@ -739,7 +730,6 @@ function startTutorial() {
   board = createBoard(rows, cols);
   score = 0;
   targetCount = 0;
-  recentTargets = [6];
   busy = false;
   calvados.clear();
   chainTracker.reset();

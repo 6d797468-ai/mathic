@@ -11,10 +11,13 @@ import {
   isCleaningMove,
   countEmptyCells,
   isValidPair,
+  isValidMerge,
   computeMerge,
   minMovesToReach,
   boardContains,
   createChainTracker,
+  hasAnyMove,
+  TARGET_NUMBER,
 } from '../src/board.js';
 import {
   pickTarget,
@@ -305,6 +308,44 @@ console.log('— Game over —');
   b[1][0] = 13; b[1][1] = 17;
   // 13×17 est valide en mul (toute paire) → pas game over.
   check('plein mais mul possible → pas game over', !isGameOver(b));
+}
+
+// --- V3 « Effondrement » : cible fixe 24 + plafond 999 ---------------------
+console.log('— V3 Effondrement (TARGET_NUMBER 24, plafond VALUE_CAP 999) —');
+{
+  const board = createBoard(1, 2);
+  board[0][0] = 512;
+  board[0][1] = 512;
+
+  // 512+512 = 1024 > 999 → fusion REFUSÉE (les tuiles glissent seulement).
+  const rAdd = slideBoard(board, 'left', 'add');
+  check(
+    'plafond : 512+512 refusé (aucune fusion)',
+    rAdd.mergedCells.length === 0,
+  );
+
+  // Un résultat égal au plafond reste permis (ex. 333×3 = 999).
+  const bOkay = createBoard(1, 2);
+  bOkay[0][0] = 3;
+  bOkay[0][1] = 333;
+  const rMul = slideBoard(bOkay, 'left', 'mul');
+  check(
+    'plafond : 3×333 = 999 autorisé',
+    rMul.mergedCells.length === 1 && rMul.board[0][0] === 999,
+  );
+
+  // isMergeWithinCap : la paire plafonnée n'est plus « jouable ».
+  check('plafond : isValidMerge(512,512,add) faux', !isValidMerge(512, 512, 'add'));
+  check('plafond : isValidMerge(3,333,mul) vrai', isValidMerge(3, 333, 'mul'));
+
+  // Une grille dont la SEULE fusion dépasserait le plafond n'a aucun coup add.
+  const bOnlyCap = createBoard(1, 2);
+  bOnlyCap[0][0] = 512;
+  bOnlyCap[0][1] = 512;
+  check('plafond : hasAnyMove(add) faux si seule fusion plafonnée', !hasAnyMove(bOnlyCap, 'add'));
+
+  // Constante de cible V3 : la DESTRUCTION vise 24.
+  check('V3 : TARGET_NUMBER === 24', TARGET_NUMBER === 24);
 }
 
 // --- Cible explicite + certificat BFS (roadmap Ph3) ------------------------------
