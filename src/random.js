@@ -87,8 +87,12 @@ export function createRng(seed) {
      * @returns {Object}
      */
     clone() {
+      // Le clone repart de l'état interne COURANT (setState injecte dans la
+      // closure), pas de la seed initiale — sinon un clone à mi-séquence
+      // diverge dès le premier tirage (écart K1, régression couverte par le
+      // test "clone à mi-séquence" de g2-determinism).
       const copy = createRng(initialSeed);
-      copy.state = state;
+      copy.setState({ seed: initialSeed, state });
       return copy;
     },
   };
