@@ -1,0 +1,49 @@
+name: test
+
+# G0.6.1 — Pipeline de tests obligatoire (Équipe Kali)
+# Bloquant pour tous les merges futurs (décision D5 de la feuille de route V4).
+# Les commandes viennent exclusivement de package.json — rien d'inventé (§10).
+# Note : le `node --test` nu est volontairement évité (piège documenté :
+# auto-découverte de tests exigeant un serveur — voir docs/gates/G0.5-OVERLAP-AND-CI-DECISIONS.md).
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node 22 (requis par Vite 8)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install (dépendances verrouillées)
+        run: npm ci
+
+      - name: Test suite
+        run: npm test
+
+      - name: Build (vérifie qu'aucun import ne casse)
+        run: npm run build
+
+      - name: Audit taille (preuve, non bloquant)
+        run: npm run audit:size
+
+      - name: Upload artefact dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-g06
+          path: dist
+          retention-days: 7

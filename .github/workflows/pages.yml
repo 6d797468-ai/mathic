@@ -33,6 +33,10 @@ jobs:
       - name: Installe les dépendances (verrouillées)
         run: npm ci
 
+      # G0.6.2 — les tests doivent passer avant tout déploiement
+      - name: Test suite (G0.6)
+        run: npm test
+
       - name: Build de production
         run: npm run build
 
