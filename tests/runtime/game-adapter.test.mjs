@@ -65,6 +65,15 @@ const OPS = ['add', 'sub', 'mul', 'div'];
   }
   assert.ok(applied >= 3, 'le mock doit accepter des coups (seed 5)');
   assert.ok(events.includes('MOVE_APPLIED'), 'MOVE_APPLIED émis');
+  // Invariant de cycle de vie : après chaque MOVE_APPLIED, un TILE_SPAWNED
+  // clôt la séquence (MOVE_APPLIED [+ MERGE_OCCURRED] → TILE_SPAWNED), même
+  // si la session ne spawn pas — le runtime clôt son animation dessus.
+  const starts = events.map((t, i) => (t === 'MOVE_APPLIED' ? i : -1)).filter((i) => i >= 0);
+  const bounds = [...starts, events.length];
+  for (let k = 0; k < bounds.length - 1; k++) {
+    const slice = events.slice(bounds[k] + 1, bounds[k + 1]);
+    assert.ok(slice.includes('TILE_SPAWNED'), `MOVE_APPLIED n°${k + 1} suivi d'un TILE_SPAWNED (reçu : ${slice.join(',')})`);
+  }
   assert.ok(events.some((t) => t === 'MERGE_OCCURRED' || t === 'TILE_SPAWNED'), 'événements de détail émis');
   off();
   const n = events.length;

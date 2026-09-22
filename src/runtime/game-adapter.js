@@ -163,7 +163,7 @@ export function createMockAdapter({ rows = 4, cols = 4, target = 24, seed = 42, 
       const spawn = spawnMock();
       emit(makeEvent('MOVE_APPLIED', { moveIndex: state.moveIndex, dir, op, gained: res.gained }));
       for (const m of res.merges) emit(makeEvent('MERGE_OCCURRED', { moveIndex: state.moveIndex, op, cells: m.operands, gained: m.value }));
-      if (spawn) emit(makeEvent('TILE_SPAWNED', { moveIndex: state.moveIndex, cell: spawn }));
+      emit(makeEvent('TILE_SPAWNED', { moveIndex: state.moveIndex, cell: spawn }));
       // effondrement cible (mock : toute tuile === target explose et score bonus)
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
         if (state.board[r][c] === target) {
@@ -276,7 +276,7 @@ export function createV3Adapter({ rows = 4, cols = 4, target = 24, initialTiles 
       }
 
       const spawnInfo = spawn();
-      if (spawnInfo) emit(makeEvent('TILE_SPAWNED', { moveIndex: state.moveIndex, cell: spawnInfo }));
+      emit(makeEvent('TILE_SPAWNED', { moveIndex: state.moveIndex, cell: spawnInfo }));
 
       // V3 « Effondrement » classique : atteindre la cible n'achève PAS la
       // partie (la case se libère, le score est crédité) — fin uniquement

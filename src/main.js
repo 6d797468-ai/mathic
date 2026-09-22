@@ -908,11 +908,19 @@ newGameButton.addEventListener('click', () => {
     replayTutorial();
     return;
   }
+  if (USE_GAME_ADAPTER) {
+    restartAdapterGame();
+    return;
+  }
   newGame();
 });
 restartButton.addEventListener('click', () => {
   if (!isTutorialDone()) {
     replayTutorial();
+    return;
+  }
+  if (USE_GAME_ADAPTER) {
+    restartAdapterGame();
     return;
   }
   newGame();
@@ -929,6 +937,7 @@ sizeSelect.addEventListener('change', () => {
   rows = r;
   cols = c;
   if (mode === 'tutorial') replayTutorial();
+  else if (USE_GAME_ADAPTER) restartAdapterGame();
   else newGame();
 });
 
@@ -1120,6 +1129,8 @@ if (
 
 function startAdapterGame() {
   adapter = createAdapter('v3', { rows, cols, target: TARGET_NUMBER, initialTiles: Math.max(4, cols) });
+  mode = 'classic';
+  document.body.dataset.mode = 'classic';
   board = createBoard(rows, cols);
   score = 0;
   target = TARGET_NUMBER;
@@ -1136,6 +1147,7 @@ function startAdapterGame() {
 
   adapter.subscribe(onAdapterEvent);
   adapter.start();
+  board = adapter.getState().board;
 
   updateHud();
   tiles.sync(board, targetValueCells());
@@ -1152,6 +1164,10 @@ function handleDirectionViaAdapter(dir) {
     // il ne re-décide pas si le coup était valide.
     audio.playError();
   }
+}
+
+function restartAdapterGame() {
+  startAdapterGame();
 }
 
 function onAdapterEvent(event) {
@@ -1218,6 +1234,8 @@ syncAudioUI();
 // Un tout nouveau joueur entre par le tutoriel FTUE, pas par une grille au hasard.
 if (!isTutorialDone()) {
   startTutorial();
+} else if (USE_GAME_ADAPTER) {
+  startAdapterGame();
 } else {
   newGame();
 }
