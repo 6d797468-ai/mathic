@@ -25,6 +25,7 @@
  * par ui.js ; ce fichier ne touche jamais au DOM.
  */
 
+import { createRng } from '../random.js';
 import { OPERATORS, TARGET_NUMBER, VALUE_CAP, DIRECTIONS } from './rules.js';
 
 /**
@@ -53,35 +54,41 @@ export function getEmptyCells(board) {
 }
 
 /**
- * Insère une tuile (valeur 1 à maxValue) dans une case vide aléatoire.
+ * Insère une tuile (valeur 1 à maxValue) dans une case vide.
  * Mutation volontaire : commodité d'usage pour l'extérieur.
  *
  * Rebranding/équilibrage (roadmap 1.2) : le spawn NATUREL est strictement
  * limité aux tuiles 1..5 — par défaut comme par convention d'appel. Les
  * valeurs > 5 ne s'obtiennent que par fusion.
+ *
  * @param {(number|null)[][]} board
  * @param {number} [maxValue]
+ * @param {Object} [rng] — instance PRNG (createRng). Si absent, fallback
+ *   Math.random() pour compatibilité (non déterministe).
  * @returns {({row: number, col: number, value: number}|null)}
  */
-export function spawnRandomTile(board, maxValue = 5) {
+export function spawnRandomTile(board, maxValue = 5, rng = null) {
   const empty = getEmptyCells(board);
   if (empty.length === 0) return null;
 
-  const { row, col } = empty[Math.floor(Math.random() * empty.length)];
-  const value = 1 + Math.floor(Math.random() * maxValue);
+  const rand = rng || { next: () => Math.random() };
+  const idx = Math.floor(rand.next() * empty.length);
+  const { row, col } = empty[idx];
+  const value = 1 + Math.floor(rand.next() * maxValue);
   board[row][col] = value;
   return { row, col, value };
 }
 
 /**
- * Remplit le plateau avec n tuiles aléatoires (état de départ).
+ * Remplit le plateau avec n tuiles (état de départ).
  * Tuiles limitées à 1..5 (roadmap 1.2).
  * @param {(number|null)[][]} board
  * @param {number} n
  * @param {number} [maxValue]
+ * @param {Object} [rng]
  */
-export function fillInitialTiles(board, n = 6, maxValue = 5) {
-  for (let i = 0; i < n; i++) spawnRandomTile(board, maxValue);
+export function fillInitialTiles(board, n = 6, maxValue = 5, rng = null) {
+  for (let i = 0; i < n; i++) spawnRandomTile(board, maxValue, rng);
 }
 
 // --- Règles de fusion par opérateur ---------------------------------------

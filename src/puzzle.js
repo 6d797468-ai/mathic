@@ -22,6 +22,7 @@ import {
   minMovesToReach,
 } from './core/board.js';
 import { DIRECTIONS } from './core/rules.js';
+import { createRng } from './random.js';
 
 /** Valeur max des tuiles de départ ET de bruit (roadmap 1.2). */
 export const PUZZLE_STARTER_MAX = 5;
@@ -31,23 +32,33 @@ export const DEFAULT_MOVES = 3;
 
 const OPS = ['add', 'sub', 'mul', 'div'];
 
-const randInt = (n) => Math.floor(Math.random() * n);
-const choice = (arr) => arr[randInt(arr.length)];
+/**
+ * Crée un générateur interne par défaut (seedée à partir de la date si
+ * non fourni). Pour un replay déterministe, `generatePuzzle` doit recevoir
+ * un `rng` instance de `createRng`.
+ * @returns {Object}
+ */
+function defaultRng() {
+  return createRng(Date.now());
+}
 
 /**
  * Défusionne C en (A, B, op) valide : A opère sur B = C, avec les règles
  * STRICTES (sub : A > B ; div : A multiple de B, reste nul ; add : A === B).
  * Restriction volontaire : A, B ∈ [1..30] pour des valeurs lisibles.
  * @param {number} c
+ * @param {Object} rng — instance PRNG (createRng)
  * @returns {[number, number, string]|null}
  */
-export function unmerge(c) {
+export function unmerge(c, rng) {
   const candidates = [];
+  const r = rng || defaultRng();
 
   for (let a = 1; a <= 30; a++) {
     // add : A === B → C = 2a (seulement si C pair).
     if (a === c - a && c - a >= 1) candidates.push([a, c - a, 'add']);
-
+  }
+  for (let a = 1; a <= 30; a++) {
     // sub : A - B = C, A > B strict, B ≥ 1.
     for (let b = 1; b < a; b++) {
       if (a - b === c) candidates.push([a, b, 'sub']);
@@ -57,7 +68,7 @@ export function unmerge(c) {
   }
 
   if (candidates.length === 0) return null;
-  return choice(candidates);
+  return r.pick(candidates);
 }
 
 /**
@@ -105,15 +116,16 @@ function reverseSlidePositions(line, positions, dirA) {
  * Construit un plateau candidat par rétro-génération à partir d'une tuile.
  * Retourne le plateau AVANT validation BFS.
  * @param {{rows: number, cols: number, moves: number, target?: number,
- *          noiseCount?: number}} spec
+ *          noiseCount?: number, rng: Object}} spec
  * @returns {{board: (number|null)[][], target: number}|null}
  */
-function buildCandidate({ rows, cols, moves, target, noiseCount }) {
+function buildCandidate({ rows, cols, moves, target, noiseCount, rng }) {
+  const r = rng;
   const board = createBoard(rows, cols);
 
   // Étape 1 : placement de la tuile-cible (centre de la grille de préférence).
-  const cr = randInt(rows);
-  const cc = randInt(cols);
+  const cr = r.int(0, rows - 1);
+  const cc = r.int(0, cols - 1);
   board[cr][cc] = target;
 
   // File des tuiles à défusionner. Sémantique de profondeur stricte :
@@ -132,13 +144,13 @@ function buildCandidate({ rows, cols, moves, target, noiseCount }) {
     const cellValue = board[item.row][item.col];
     if (cellValue === null || cellValue <= 3) continue;
 
-    const split = unmerge(cellValue);
+    const split = unmerge(cellValue, r);
     if (!split) continue;
 
     const [a, b, op] = split;
 
     // Choix d'une ligne/colonne passant par la tuile source.
-    const useRow = Math.random() < 0.5;
+    const useRow = r.next() < 0.5;
     const freeA = [];
     const freeB = [];
 
@@ -150,10 +162,10 @@ function buildCandidate({ rows, cols, moves, target, noiseCount }) {
         }
       }
     } else {
-      for (let r = 0; r < rows; r++) {
-        if (r !== item.row && board[r][item.col] === null) {
-          freeA.push({ row: r, col: item.col });
-          freeB.push({ row: r, col: item.col });
+      for (let rr = 0; rr < rows; rr++) {
+        if (rr !== item.row && board[rr][item.col] === null) {
+          freeA.push({ row: rr, col: item.col });
+          freeB.push({ row: rr, col: item.col });
         }
       }
     }
@@ -190,18 +202,18 @@ function buildCandidate({ rows, cols, moves, target, noiseCount }) {
   // Le bruit crée des raccourcis et bloque des lignes : c'est la cause
   // principale des rejets BFS. Le générateur l'échelonne (voir
   // generatePuzzle) : généreux au début, réduit puis nul en secours.
-  const noise = noiseCount ?? 2 + randInt(2);
+  const noise = noiseCount ?? 2 + r.int(0, 1);
   if (noise > 0) {
     const empty = [];
-    for (let r = 0; r < rows; r++) {
+    for (let rr = 0; rr < rows; rr++) {
       for (let c = 0; c < cols; c++) {
-        if (board[r][c] === null) empty.push({ row: r, col: c });
+        if (board[rr][c] === null) empty.push({ row: rr, col: c });
       }
     }
     const count = Math.min(empty.length, noise);
     for (let i = 0; i < count; i++) {
-      const pos = empty.splice(randInt(empty.length), 1)[0];
-      board[pos.row][pos.col] = 1 + randInt(PUZZLE_STARTER_MAX);
+      const pos = empty.splice(r.int(0, empty.length - 1), 1)[0];
+      board[pos.row][pos.col] = 1 + r.int(0, PUZZLE_STARTER_MAX - 1);
     }
   }
 
@@ -238,7 +250,7 @@ function buildGuessBoard(rows, cols) {
  * meilleure grille honnête — sa profondeur RÉELLE devient `moves` — plutôt
  * qu'un puzzle qui mentirait sur le défi.
  * @param {{rows: number, cols: number, moves?: number, target?: number,
- *          attempts?: number}} spec
+ *          attempts?: number, rng?: Object}} spec
  * @returns {{board: (number|null)[][], target: number, moves: number}}
  */
 export function generatePuzzle({
@@ -247,7 +259,9 @@ export function generatePuzzle({
   moves = DEFAULT_MOVES,
   target,
   attempts = 200,
+  rng: providedRng,
 } = {}) {
+  const r = providedRng || defaultRng();
   const pool = target !== undefined && Number.isInteger(target) && target > 3
     ? [target]
     : DEFAULT_TARGET_POOL;
@@ -256,17 +270,18 @@ export function generatePuzzle({
   // visuelle), réduit puis nul en fin de budget (le bruit crée des
   // raccourcis — sans lui, l'acceptation BFS devient quasi certaine).
   const noiseFor = (i) =>
-    i < attempts * 0.6 ? 2 + randInt(2) : i < attempts * 0.85 ? 1 + randInt(2) : 0;
+    i < attempts * 0.6 ? 2 + r.int(0, 1) : i < attempts * 0.85 ? 1 + r.int(0, 1) : 0;
 
   // Passe 1 : échantillonnage avec bruit.
   for (let i = 0; i < attempts; i++) {
-    const t = choice(pool);
+    const t = r.pick(pool);
     const candidate = buildCandidate({
       rows,
       cols,
       moves,
       target: t,
       noiseCount: noiseFor(i),
+      rng: r,
     });
     if (!candidate) continue;
 
@@ -283,8 +298,8 @@ export function generatePuzzle({
   // Passe 2 : sans bruit (le bruit est la cause principale des raccourcis),
   // budget étendu pour les profondeurs hautes.
   for (let i = 0; i < 2500; i++) {
-    const t = choice(pool);
-    const candidate = buildCandidate({ rows, cols, moves, target: t, noiseCount: 0 });
+    const t = r.pick(pool);
+    const candidate = buildCandidate({ rows, cols, moves, target: t, noiseCount: 0, rng: r });
     if (!candidate) continue;
     const shortest = minMovesToReach(candidate.board, t, moves);
     if (shortest === moves) return { board: candidate.board, target: t, moves };
@@ -295,8 +310,8 @@ export function generatePuzzle({
   // sa vraie valeur (≤ moves). Le certificat BFS tient toujours.
   let best = null;
   for (let i = 0; i < 500; i++) {
-    const t = choice(pool);
-    const candidate = buildCandidate({ rows, cols, moves, target: t, noiseCount: 0 });
+    const t = r.pick(pool);
+    const candidate = buildCandidate({ rows, cols, moves, target: t, noiseCount: 0, rng: r });
     if (!candidate) continue;
     const shortest = minMovesToReach(candidate.board, t, moves);
     if (shortest === null) continue;

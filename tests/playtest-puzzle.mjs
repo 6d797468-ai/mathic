@@ -12,6 +12,7 @@ import {
 } from '../src/core/board.js';
 import { DIRECTIONS, OPERATORS } from '../src/core/rules.js';
 import { generatePuzzle } from '../src/puzzle.js';
+import { createRng } from '../src/random.js';
 
 const DIRS = Object.keys(DIRECTIONS);
 const OPS = Object.keys(OPERATORS);
@@ -81,7 +82,7 @@ const times = [];
 
 for (let i = 0; i < 50; i++) {
   const t0 = Date.now();
-  const p = generatePuzzle({ rows: 4, cols: 4, moves: 3, attempts: 80 });
+  const p = generatePuzzle({ rows: 4, cols: 4, moves: 3, attempts: 80, rng: createRng(1000 + i) });
   times.push(Date.now() - t0);
 
   const path = solvePath(p.board, p.target, p.moves);
@@ -121,7 +122,7 @@ let undoRestores = 0;
 let falsePositive = 0; // "insolvable" annoncé à tort (coup optimal encore possible)
 
 for (let i = 0; i < 50; i++) {
-  const p = generatePuzzle({ rows: 4, cols: 4, moves: 3, attempts: 80 });
+  const p = generatePuzzle({ rows: 4, cols: 4, moves: 3, attempts: 80, rng: createRng(2000 + i) });
   const path = solvePath(p.board, p.target, p.moves);
   if (!path) continue;
 
