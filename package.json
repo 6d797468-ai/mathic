@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/build-sw.mjs",
     "preview": "vite preview",
-    "test": "node --test tests/*.test.mjs && node tests/playtest-puzzle.mjs",
+    "test": "node --test tests/logic.test.mjs tests/diff.test.mjs tests/history.test.mjs && node tests/g1-contracts.test.mjs && node tests/playtest-puzzle.mjs && node tests/g2-determinism.test.mjs",
     "serve:https": "node scripts/https-server.mjs",
     "audit:size": "node scripts/audit-size.mjs",
     "gen:icons": "node scripts/gen-icons.mjs",
