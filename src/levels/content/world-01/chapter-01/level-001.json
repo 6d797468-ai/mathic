@@ -1,0 +1,11 @@
+{
+  "id": "world-01/chapter-01/level-001",
+  "target": 12,
+  "moves": 3,
+  "seed": "w01c01l001",
+  "rows": 4,
+  "cols": 4,
+  "label": "Monde 1 - Chapitre 1 - Niveau 1",
+  "world": 1,
+  "chapter": 1
+}

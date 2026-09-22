@@ -1,28 +1,32 @@
 /**
- * src/levels/session.js — Session de jeu (G3)
+ * levels/session.js — Session de jeu complète (L6)
  *
- * Encapsule une partie : état, commandes (swipes), replay, et génération
- * de niveaux. Zéro DOM, zéro effet secondaire.
+ * Encapsule une partie : état, commandes, undo, replay, progression.
+ * Zéro DOM, zéro effet secondaire.
  *
  * API :
  *   createSession(spec) → Session
  *   session.command(dir, op) → CommandResult
- *   session.replay() → void (restaure l'état initial)
+ *   session.undo() → boolean
  *   session.getSnapshot() → GameState
+ *   session.replay() → void
+ *   session.getEvents() → Array
  *
- * Gate : G3
+ * Gate : L6
  */
 
-import { createBoard, slideBoard, boardContains, spawnRandomTile, fillInitialTiles, hasAnyMove } from '../core/board.js';
-import { TARGET_NUMBER, VALUE_CAP } from '../core/rules.js';
+import { createInitialState, cloneState, serializeState, deserializeState, generateSessionId } from '../core/state.js';
+import { applyCommand, isValidCommand } from '../core/command.js';
 import { createRng, createRngStreams } from '../random.js';
 import { generatePuzzle } from '../puzzle.js';
-import { LEVEL_PALETTE, DEFAULT_BOARD_SIZE } from './definitions.js';
+import { LEVEL_PALETTE, DEFAULT_BOARD_SIZE, getLevelByIndex } from './definitions.js';
+import { isGameOver, fillInitialTiles } from '../core/board.js';
+import { createGameStartedEvent } from '../core/events.js';
 
 /**
  * Crée une session de jeu (mode libre ou puzzle).
  * @param {{mode: 'free'|'puzzle', rows?: number, cols?: number, target?: number|null,
- *          moves?: number, seed?: number|string, rng?: Object}} spec
+ *          moves?: number, seed?: number|string, levelIndex?: number, rng?: Object}} spec
  * @returns {Object} Session
  */
 export function createSession({
@@ -32,159 +36,245 @@ export function createSession({
   target = null,
   moves = 3,
   seed = Date.now(),
+  levelIndex = 0,
   rng: providedRng,
 } = {}) {
-  const rng = providedRng || createRng(seed);
   const baseSeed = seed;
-  const originalTarget = target;
-  const originalMoves = moves;
-  let streams = createRngStreams(baseSeed);
+  const rng = providedRng || createRng(seed);
+  const streams = createRngStreams(baseSeed);
 
-  let board = createBoard(rows, cols);
-  let score = 0;
-  let moveIndex = 0;
-  let isGameOver = false;
-  let victory = false;
+  // Configuration du niveau
   let puzzleTarget = target;
   let puzzleMoves = moves;
-  let history = []; // pour undo (snapshots)
+  let currentLevelIndex = levelIndex;
 
-  const snapshot = () => JSON.parse(JSON.stringify({ board, score, moveIndex, isGameOver, victory }));
+  if (mode === 'puzzle') {
+    const levelDef = getLevelByIndex(levelIndex);
+    if (target === null) puzzleTarget = levelDef.target;
+    if (moves === 3) puzzleMoves = levelDef.moves;
+  }
+
+  // État initial
+  let state = createInitialState({
+    rows,
+    cols,
+    target: puzzleTarget,
+    seed: String(baseSeed),
+  });
+
+  // Initialiser le plateau
+  if (mode === 'puzzle') {
+    const generated = generatePuzzle({
+      rows,
+      cols,
+      moves: puzzleMoves,
+      target: puzzleTarget,
+      rng: streams.puzzle,
+    });
+    state = { ...state, board: generated.board, target: generated.target, moves: generated.moves };
+  } else {
+    // Mode free : remplir avec 6 tuiles initiales
+    fillInitialTiles(state.board, 6, 5, streams.game);
+  }
+
+  // Historique pour undo (pile d'états complets)
+  const history = [];
+  const maxHistory = 50;
+  let eventLog = [];
+
+  // Événement de démarrage
+  const startEvent = createGameStartedEvent({
+    sessionId: state.sessionId,
+    mode,
+    rows,
+    cols,
+    target: state.target,
+    moves: state.moves,
+  });
+  eventLog.push(startEvent);
 
   const pushHistory = () => {
-    history.push(snapshot());
-    if (history.length > 50) history.shift();
+    history.push(cloneState(state));
+    if (history.length > maxHistory) history.shift();
   };
 
   const popHistory = () => {
     if (history.length === 0) return false;
-    const s = history.pop();
-    board = s.board;
-    score = s.score;
-    moveIndex = s.moveIndex;
-    isGameOver = s.isGameOver;
-    victory = s.victory;
+    state = history.pop();
     return true;
   };
 
-  const initBoard = () => {
-    if (mode === 'puzzle') {
-      const generated = generatePuzzle({ rows, cols, moves: originalMoves, target: originalTarget, rng: streams.puzzle });
-      board = generated.board;
-      puzzleTarget = generated.target;
-      puzzleMoves = generated.moves;
-    } else {
-      fillInitialTiles(board, 6, 5, streams.game);
-    }
+  const recordEvents = (events) => {
+    eventLog.push(...events);
   };
-
-  // Initialisation du plateau.
-  initBoard();
 
   return {
     get mode() { return mode; },
     get rows() { return rows; },
     get cols() { return cols; },
-    get target() { return puzzleTarget; },
-    get moves() { return puzzleMoves; },
-    get currentBoard() { return board; },
-    get currentScore() { return score; },
-    get currentMoveIndex() { return moveIndex; },
-    get gameOver() { return isGameOver; },
-    get isVictory() { return victory; },
-    get rng() { return rng; },
+    get target() { return state.target; },
+    get moves() { return state.moves; },
+    get currentBoard() { return state.board; },
+    get currentScore() { return state.score; },
+    get currentMoveIndex() { return state.moves; },
+    get gameOver() { return state.isGameOver; },
+    get isVictory() { return state.victory; },
+    get sessionId() { return state.sessionId; },
+    get seed() { return state.seed; },
 
     /**
-     * Applique un coup (swipe direction + opérateur).
+     * Applique un coup (direction + opérateur).
      * @param {string} dir
      * @param {string} op
-     * @returns {{moved: boolean, mergedCells: Array, invalidCells: Array,
-     *           exploded: number, gained: number, gameOver: boolean, victory: boolean}}
+     * @returns {CommandResult}
      */
     command(dir, op) {
-      if (isGameOver) return { moved: false, mergedCells: [], invalidCells: [], exploded: 0, gained: 0, gameOver: true, victory };
+      if (state.isGameOver) {
+        return { moved: false, mergedCells: [], invalidCells: [], exploded: 0, gained: 0, gameOver: true, victory: state.victory };
+      }
+
+      if (!isValidCommand({ type: 'MOVE', dir, op })) {
+        return { moved: false, mergedCells: [], invalidCells: [], exploded: 0, gained: 0, gameOver: false, victory: false };
+      }
 
       pushHistory();
-      const result = slideBoard(board, dir, op);
-      board = result.board;
-      score += result.gained;
-      moveIndex++;
-
-      // Explosion des tuiles = cible (mode puzzle).
-      let exploded = 0;
-      if (puzzleTarget !== null) {
-        for (let r = 0; r < board.length; r++) {
-          for (let c = 0; c < board[r].length; c++) {
-            if (board[r][c] === puzzleTarget) {
-              board[r][c] = null;
-              exploded++;
-            }
-          }
-        }
-      }
-
-      // Spawn (mode libre uniquement).
-      if (mode === 'free' && result.moved) {
-        spawnRandomTile(board, 5, streams.game);
-      }
-
-      // Game over check.
-      isGameOver = !hasAnyMove(board);
-      victory = mode === 'puzzle' && exploded > 0;
+      const { state: newState, events } = applyCommand(state, { type: 'MOVE', dir, op }, streams.game);
+      state = newState;
+      recordEvents(events);
 
       return {
-        moved: result.moved,
-        mergedCells: result.mergedCells,
-        invalidCells: result.invalidCells,
-        exploded,
-        gained: result.gained,
-        gameOver: isGameOver,
-        victory,
+        moved: events.some((e) => e.type === 'MOVE_APPLIED' && e.moved),
+        mergedCells: events.filter((e) => e.type === 'MERGE_OCCURRED').flatMap((e) => e.cells),
+        invalidCells: events.find((e) => e.type === 'MOVE_APPLIED')?.invalidCells || [],
+        exploded: events.filter((e) => e.type === 'TARGET_COLLAPSED').reduce((sum, e) => sum + e.cells.length, 0),
+        gained: events.filter((e) => e.type === 'MOVE_APPLIED').reduce((sum, e) => sum + e.gained, 0),
+        gameOver: state.isGameOver,
+        victory: state.victory,
+        events,
       };
     },
 
     /**
-     * Undo (retour en arrière).
+     * Undo (retour en arrière d'un coup).
      * @returns {boolean}
      */
     undo() {
-      return popHistory();
+      if (state.isGameOver) return false;
+      const result = popHistory();
+      if (result) {
+        recordEvents([{ type: 'UNDO_APPLIED', moveIndex: state.moves, timestamp: Date.now() }]);
+      }
+      return result;
     },
 
     /**
-     * Snapshot sérialisable de l'état.
-     * @returns {Object}
+     * Snapshot sérialisable de l'état complet.
+     * @returns {GameState}
      */
     getSnapshot() {
-      return {
-        mode,
+      return cloneState(state);
+    },
+
+    /**
+     * Restaure l'état initial (replay déterministe).
+     */
+    replay() {
+      // Recrée les flux à partir de la seed de base
+      const newStreams = createRngStreams(baseSeed);
+      Object.assign(streams, newStreams);
+
+      // Recrée l'état initial
+      state = createInitialState({
+        sessionId: state.sessionId,
         rows,
         cols,
         target: puzzleTarget,
-        moves: puzzleMoves,
-        board,
-        score,
-        moveIndex,
-        isGameOver,
-        victory,
         seed: String(baseSeed),
-      };
+      });
+
+      if (mode === 'puzzle') {
+        const generated = generatePuzzle({
+          rows,
+          cols,
+          moves: puzzleMoves,
+          target: puzzleTarget,
+          rng: streams.puzzle,
+        });
+        state = { ...state, board: generated.board, target: generated.target, moves: generated.moves };
+      } else {
+        fillInitialTiles(state.board, 6, 5, streams.game);
+      }
+
+      history.length = 0;
+      eventLog = [startEvent];
     },
 
     /**
-     * Restaure l'état initial (replay).
+     * Récupère tous les événements émis.
+     * @returns {Array}
      */
-    replay() {
-      // Recrée les flux à partir de la seed de base (déterministe).
-      streams = createRngStreams(baseSeed);
+    getEvents() {
+      return [...eventLog];
+    },
 
-      board = createBoard(rows, cols);
-      score = 0;
-      moveIndex = 0;
-      isGameOver = false;
-      victory = false;
-      history = [];
-      initBoard();
+    /**
+     * Charge un état sérialisé (pour replay/persistance).
+     * @param {GameState} snapshot
+     */
+    loadSnapshot(snapshot) {
+      if (!isValidGameState(snapshot)) {
+        throw new Error('Snapshot invalide');
+      }
+      state = cloneState(snapshot);
+      history.length = 0;
+    },
+
+    /**
+     * Passe au niveau suivant (mode puzzle).
+     * @returns {boolean}
+     */
+    nextLevel() {
+      if (mode !== 'puzzle') return false;
+      currentLevelIndex++;
+      const levelDef = getLevelByIndex(currentLevelIndex);
+      puzzleTarget = levelDef.target;
+      puzzleMoves = levelDef.moves;
+      return true;
+    },
+
+    /**
+     * Retourne la définition du niveau courant.
+     * @returns {Object}
+     */
+    getCurrentLevel() {
+      return getLevelByIndex(currentLevelIndex);
     },
   };
+}
+
+/**
+ * Valide un GameState (import depuis state.js)
+ * @param {Object} state
+ * @returns {boolean}
+ */
+function isValidGameState(state) {
+  if (!state || typeof state !== 'object') return false;
+  if (typeof state.sessionId !== 'string') return false;
+  if (!Number.isInteger(state.rows) || state.rows <= 0) return false;
+  if (!Number.isInteger(state.cols) || state.cols <= 0) return false;
+  if (state.target !== null && (!Number.isInteger(state.target) || state.target <= 0)) return false;
+  if (!Array.isArray(state.board)) return false;
+  if (state.board.length !== state.rows) return false;
+  for (const row of state.board) {
+    if (!Array.isArray(row) || row.length !== state.cols) return false;
+    for (const cell of row) {
+      if (cell !== null && (!Number.isInteger(cell) || cell <= 0)) return false;
+    }
+  }
+  if (!Number.isInteger(state.score) || state.score < 0) return false;
+  if (!Number.isInteger(state.moves) || state.moves < 0) return false;
+  if (typeof state.isGameOver !== 'boolean') return false;
+  if (typeof state.victory !== 'boolean') return false;
+  if (typeof state.seed !== 'string') return false;
+  return true;
 }

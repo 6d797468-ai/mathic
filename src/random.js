@@ -101,7 +101,7 @@ export function createRng(seed) {
  * @param {number|string} seed
  * @returns {number}
  */
-function toUint32(seed) {
+export function toUint32(seed) {
   if (typeof seed === 'number' && Number.isFinite(seed)) {
     return Math.abs(Math.floor(seed)) >>> 0;
   }
