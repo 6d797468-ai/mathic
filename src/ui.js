@@ -135,10 +135,15 @@ export function createTileManager(tileLayer, rows, cols) {
    * allant de (fromRow,fromCol) vers (toRow,toCol). Une fusion = 2 entrées
    * vers la même destination : les deux tuiles convergent, une seule
    * survit et affiche la valeur fusionnée avec un rebond.
+   *
+   * V2 (juiciness) : chaque tuile en mouvement subit un étirement dans
+   * l'axe de son trajet (squash & stretch), et les fusions éclatent en
+   * confettis aux couleurs de l'opérateur.
    * @param {{fromRow: number, fromCol: number, toRow: number, toCol: number, value: number}[]} moves
    * @param {{row: number, col: number, value: number}[]} mergedCells
+   * @param {{confettiColor?: string|null}} [opts]
    */
-  function slide(moves, mergedCells = []) {
+  function slide(moves, mergedCells = [], { confettiColor = null } = {}) {
     const mergedKeys = new Set(mergedCells.map((m) => posKey(m.row, m.col)));
 
     // Grouper par destination.
@@ -163,13 +168,34 @@ export function createTileManager(tileLayer, rows, cols) {
       });
     }
 
+    /**
+     * Squash & stretch : étire la tuile dans l'axe du mouvement.
+     * Les variables --sx/--sy sont consommées par `@keyframes move-squash`.
+     * @param {object} tile
+     * @param {number} fromRow
+     * @param {number} fromCol
+     * @param {number} toRow
+     * @param {number} toCol
+     */
+    function applySquash(tile, fromRow, fromCol, toRow, toCol) {
+      if (!tile) return;
+      const dx = toCol - fromCol;
+      const dy = toRow - fromRow;
+      const sx = Math.abs(dx) > Math.abs(dy) ? '1.09' : '0.94';
+      const sy = Math.abs(dy) > Math.abs(dx) ? '1.09' : '0.94';
+      tile.el.style.setProperty('--sx', sx);
+      tile.el.style.setProperty('--sy', sy);
+      animate(tile.el, 'tile-move-active');
+    }
+
     for (const { key, merged, items } of lookups) {
       const [toRow, toCol] = key.split(',').map(Number);
 
       if (merged) {
         const survivor = items[items.length - 1].tile;
-        for (const { tile } of items) {
+        for (const { tile, m } of items) {
           if (!tile || tile === survivor) continue;
+          applySquash(tile, m.fromRow, m.fromCol, m.toRow, m.toCol);
           tile.el.style.zIndex = '2'; // l'arrivante passe au-dessus
           tiles.delete(posKey(tile.row, tile.col));
           setTimeout(() => tile.el.remove(), MOVE_DURATION);
@@ -191,12 +217,14 @@ export function createTileManager(tileLayer, rows, cols) {
               place(survivor.el, toRow, toCol);
             }
             survivor.el.style.zIndex = '';
-            animate(survivor.el, 'merge');
+            animate(survivor.el, 'tile-merge-pop');
+            if (confettiColor) burstConfetti(survivor.el, confettiColor);
           }, MOVE_DURATION);
         }
       } else {
-        const { tile } = items[0];
+        const { tile, m } = items[0];
         if (!tile) continue;
+        applySquash(tile, m.fromRow, m.fromCol, m.toRow, m.toCol);
         tiles.delete(posKey(tile.row, tile.col));
         tile.row = toRow;
         tile.col = toCol;
@@ -204,6 +232,54 @@ export function createTileManager(tileLayer, rows, cols) {
         place(tile.el, toRow, toCol);
       }
     }
+  }
+
+  /**
+   * Confettis vectoriels projetés depuis le centre d'une tuile (fusion).
+   * @param {HTMLElement} anchorEl tuile fusionnée
+   * @param {string} color couleur de l'opérateur courant
+   */
+  function burstConfetti(anchorEl, color) {
+    const count = 10;
+    const cx = anchorEl.offsetLeft + anchorEl.offsetWidth / 2;
+    const cy = anchorEl.offsetTop + anchorEl.offsetHeight / 2;
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'confetti';
+      p.style.backgroundColor = color;
+      p.style.left = `${cx}px`;
+      p.style.top = `${cy}px`;
+      const angle = (Math.PI * 2 * i) / count + Math.random() * 1.2;
+      const dist = 34 + Math.random() * 30;
+      p.style.setProperty('--px', `${Math.cos(angle) * dist}px`);
+      p.style.setProperty('--py', `${Math.sin(angle) * dist - 26}px`);
+      p.style.setProperty('--rot', `${-120 + Math.random() * 240}deg`);
+      tileLayer.appendChild(p);
+      setTimeout(() => p.remove(), 700);
+    }
+  }
+
+  /**
+   * Texte flottant à COORDONNÉES GRILLE (V2) : affiche l'opération réalisée
+   * lors d'une fusion au-dessus de la tuile résultat, puis s'estompe en
+   * montant.
+   * @param {number} row
+   * @param {number} col
+   * @param {string} text
+   * @param {string} [color]
+   */
+  function spawnFloatingText(row, col, text, color = null) {
+    const popup = document.createElement('div');
+    popup.className = 'float-text';
+    popup.textContent = text;
+    if (color) popup.style.color = color;
+    const w = `((100% - (${cols} - 1) * var(--gap)) / ${cols})`;
+    const h = `((100% - (${rows} - 1) * var(--gap)) / ${rows})`;
+    popup.style.width = `calc(${w})`;
+    popup.style.left = `calc(${col} * ${w} + ${col} * var(--gap))`;
+    popup.style.top = `calc(${row} * ${h} + ${row} * var(--gap))`;
+    tileLayer.appendChild(popup);
+    setTimeout(() => popup.remove(), 900);
   }
 
   /**
@@ -438,6 +514,7 @@ export function createTileManager(tileLayer, rows, cols) {
     screenShake,
     rewind,
     tileAt,
+    spawnFloatingText,
   };
 }
 

@@ -180,12 +180,13 @@ h1 {
 .op-btn[data-op='mul'].active { background: #e8b04b; color: #241a04; border-color: #ffd996; box-shadow: 0 0 18px rgba(232, 176, 75, 0.55); }
 .op-btn[data-op='div'].active { background: #4a90d9; color: #0a1a2b; border-color: #9cc6f0; box-shadow: 0 0 18px rgba(74, 144, 217, 0.55); }
 
-/* Boutons secondaires (indice, undo, puzzle, profiler) */
+/* Boutons secondaires (indice, undo, puzzle, profiler, son, plein-écran) */
 #btn-hint,
 #btn-undo,
 #btn-puzzle,
 #btn-profile,
 #btn-fs,
+#btn-audio,
 #btn-install {
   min-height: 48px;
   padding: 0 16px;
@@ -212,6 +213,7 @@ body[data-mode='puzzle'] #btn-undo {
 #btn-puzzle:active,
 #btn-profile:active,
 #btn-fs:active,
+#btn-audio:active,
 #btn-install:active {
   transform: scale(0.94);
 }
@@ -221,8 +223,16 @@ body[data-mode='puzzle'] #btn-undo {
 #btn-puzzle:hover,
 #btn-profile:hover,
 #btn-fs:hover,
+#btn-audio:hover,
 #btn-install:hover {
   background: #2e3350;
+}
+
+/* État muet : bouton son éteint (son coupé) */
+#btn-audio[aria-pressed='true'] {
+  color: var(--text-dim);
+  border-color: #12141c;
+  background: #262a3c;
 }
 
 /* Bouton d'installation PWA : sous la rangée d'actions, tout en contraste. */
@@ -418,12 +428,6 @@ body.fullscreen #operator-bar {
   }
 }
 
-@keyframes merge-bounce {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.22); }
-  100% { transform: scale(1); }
-}
-
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-5px); }
@@ -438,9 +442,57 @@ body.fullscreen #operator-bar {
 }
 
 .tile.spawn { animation: spawn-pop 0.18s ease-out; }
-.tile.merge { animation: merge-bounce 0.2s ease-out; }
 .tile.shake { animation: shake 0.3s ease-in-out; }
 .tile.exploding { animation: boom 0.32s ease-in forwards; }
+
+/* --- V2 « Juiciness » : squash & stretch, rebond de fusion ------------
+
+   `.tile-move-active` : étirement de la tuile DANS L'AXE de son trajet
+   pendant le glissement. Les facteurs d'échelle viennent du JS via les
+   propriétés --sx/--sy (horizontal → large étirée ; vertical → haut).
+   `.tile-merge-pop` : rebond élastique post-fusion (écrase puis repart). */
+.tile-move-active {
+  animation: move-squash 0.15s ease-in-out;
+}
+
+@keyframes move-squash {
+  0% { transform: scale(var(--sx, 1), var(--sy, 1)); }
+  100% { transform: scale(1, 1); }
+}
+
+.tile-merge-pop {
+  animation: merge-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes merge-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.28); }
+  70% { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+
+/* Confettis vectoriels aux couleurs de l'opérateur (fusion réussie) */
+.confetti {
+  position: absolute;
+  width: 8px;
+  height: 6px;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 3;
+  animation: confetti-fly 0.62s ease-out forwards;
+}
+
+@keyframes confetti-fly {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--px, 0), var(--py, 0))
+      rotate(var(--rot, 90deg)) scale(0.6);
+    opacity: 0;
+  }
+}
 
 /* Popup de points flottant */
 .float-text {

@@ -56,12 +56,18 @@ import {
   coachPuzzleWin,
 } from './ai.js';
 import { createProfiler } from './profiler.js';
+import { createAudioManager } from './audio.js';
 import {
   createCalvados,
   makeEntry,
   reversePlan,
   calvadosContext,
 } from './history.js';
+
+// Couleurs d'opérateur (miroir des règles .op-btn[data-op]) : récompenses
+// visuelles V2 (confettis, textes flottants) teintées par l'op choisi.
+const OP_COLORS = { add: '#4fd1c5', sub: '#e8704b', mul: '#e8b04b', div: '#4a90d9' };
+const OP_SYMBOLS = { add: '+', sub: '−', mul: '×', div: '÷' };
 
 // --- État -------------------------------------------------------------------
 
@@ -94,6 +100,14 @@ let moveIndex = 0; // compteur de coups joués (pour la chaîne)
 let chainWindowLeft = 0;
 let chainCount = 0;
 
+// Résonance V2 : nombre de coups RÉUSSIS (avec fusion) d'affilée — le pitch
+// des fusions monte d'un demi-ton à chaque pas (ascension harmonique).
+let mergeStreak = 0;
+
+// --- Moteur audio + éléments DOM -------------------------------------------
+
+const audio = createAudioManager();
+
 // --- Éléments DOM -----------------------------------------------------------
 
 const gridElement = document.querySelector('#grid');
@@ -108,6 +122,7 @@ const newGameButton = document.querySelector('#new-game');
 const puzzleButton = document.querySelector('#btn-puzzle');
 const undoButton = document.querySelector('#btn-undo');
 const fullscreenButton = document.querySelector('#btn-fs');
+const audioButton = document.querySelector('#btn-audio');
 const installButton = document.querySelector('#btn-install');
 const movesLeftElement = document.querySelector('#moves-left');
 const sizeSelect = document.querySelector('#board-size-select');
@@ -244,6 +259,7 @@ function newGame() {
   moveIndex = 0;
   chainWindowLeft = 0;
   chainCount = 0;
+  mergeStreak = 0;
   hideChain();
 
   buildGrid(gridElement, rows, cols);
@@ -372,11 +388,13 @@ function handleDirection(dir) {
 
   const result = slideBoard(board, dir, currentOp);
   if (!result.moved) {
+    audio.playError(); // glissement sans effet → son « bloqué »
     reactToMove(result, []);
     return;
   }
 
   busy = true;
+  audio.playMove(); // « pop » tactile au départ du glissement
   // Snapshot COMPLET avant le coup : l'Undo restaure exactement cet état
   // (score, jauge, cible, chaîne, compteur de coups).
   const snapBefore = { score, movesLeft, target, targetCount, moveIndex, chainWindowLeft, chainCount };
@@ -395,13 +413,42 @@ function handleDirection(dir) {
       }
     : null;
 
-  // 1) Les tuiles glissent (et les fusions convergent).
-  tiles.slide(result.moves, result.mergedCells);
+  // 1) Les tuiles glissent (et les fusions convergent) — la fusion éclate
+  // en confettis teintés de l'opérateur (V2).
+  const mergeCount = result.mergedCells.length;
+  if (mergeCount > 0) {
+    // Résonance harmonique : +1 pas par coup réussi d'affilée (et +1 par
+    // fusion supplémentaire dans le même coup).
+    mergeStreak += 1;
+    audio.playMerge(mergeStreak + mergeCount - 1);
+  } else {
+    mergeStreak = 0; // coup sans fusion → la série retombe
+  }
+  tiles.slide(result.moves, result.mergedCells, {
+    confettiColor: OP_COLORS[currentOp],
+  });
 
-  // 2) Feedback des contacts invalides : shake des tuiles + SCREEN SHAKE.
+  // Texte flottant de l'opération réalisée au-dessus de chaque fusion
+  // (ex. « +14 », « ×24 »), synchronisé sur le rebond de la tuile résultat.
+  if (mergeCount > 0) {
+    setTimeout(() => {
+      for (const mc of result.mergedCells) {
+        tiles.spawnFloatingText(
+          mc.row,
+          mc.col,
+          `${OP_SYMBOLS[currentOp]}${mc.value}`,
+          OP_COLORS[currentOp]
+        );
+      }
+    }, MOVE_DURATION + 50);
+  }
+
+  // 2) Feedback des contacts invalides : shake des tuiles + SCREEN SHAKE
+  // + son d'erreur sourd.
   if (result.invalidCells.length > 0) {
     tiles.shake(result.invalidCells);
     tiles.screenShake({ strong: result.invalidCells.length > 2 });
+    audio.playError();
   }
 
   // 3) Explosion éventuelle des tuiles-objectif (après le glissement).
@@ -425,6 +472,7 @@ function handleDirection(dir) {
       // Le combo amplifie visuellement (particules ×, halo doré).
       tiles.explode(exploded, bonus, { combo: isCombo });
       tiles.bumpScore(scoreElement);
+      audio.playExplode(isCombo ? chainInfo.chainLength : 1); // arpège si combo
       if (isCombo) tiles.screenShake({ strong: true }); // euphorie
 
       // Badge : ×N visible tant que la fenêtre de 2 coups est ouverte.
@@ -514,6 +562,7 @@ function startPuzzle() {
   moveIndex = 0;
   chainWindowLeft = 0;
   chainCount = 0;
+  mergeStreak = 0;
   hideChain();
 
   board = createBoard(rows, cols);
@@ -724,6 +773,8 @@ window.addEventListener('keydown', (e) => {
     profiler.toggle();
   } else if (e.key === 'f' || e.key === 'F') {
     toggleFullscreen();
+  } else if (e.key === 'm' || e.key === 'M') {
+    if (audioButton) audioButton.click();
   }
 });
 
@@ -778,6 +829,35 @@ document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 if (fullscreenButton) {
   fullscreenButton.addEventListener('click', toggleFullscreen);
 }
+
+// --- Moteur audio (V2) — coupure/activation persitante --------------------
+
+/**
+ * Mirotre l'état de muet sur le bouton 🔊/🔇 (et aria-pressed).
+ */
+function syncAudioUI() {
+  if (!audioButton) return;
+  const muted = audio.isMuted();
+  audioButton.textContent = muted ? '🔇' : '🔊';
+  audioButton.setAttribute('aria-pressed', String(muted));
+}
+
+if (audioButton) {
+  audioButton.addEventListener('click', () => {
+    audio.toggleMute();
+    syncAudioUI();
+  });
+}
+
+// Politique d'autoplay : le contexte audio est débloqué au PREMIER geste de
+// l'utilisateur (clic/touche/glissement), puis jamais bloqué de la session.
+const unlockAudio = () => {
+  audio.unlock();
+  window.removeEventListener('pointerdown', unlockAudio);
+  window.removeEventListener('keydown', unlockAudio);
+};
+window.addEventListener('pointerdown', unlockAudio);
+window.addEventListener('keydown', unlockAudio);
 
 // --- PWA — installation native + hors-ligne total (Phase 5) --------------------
 
@@ -836,5 +916,6 @@ if (
 
 // --- Démarrage -----------------------------------------------------------------------
 
+syncAudioUI();
 newGame();
 startAI();
