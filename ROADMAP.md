@@ -17,11 +17,15 @@
 L’objectif : ne jamais perdre une ligne d’historique en descendant dans le terrier.
 
 ### À faire
-- [ ] Différentiel de tuiles entre deux états (avant/après) — `diffBoards` (tuiles glissées, fusionnées, créées).
+- [x] Différentiel de tuiles entre deux états (avant/après) — `diffBoards` (tuiles glissées, fusionnées, créées).
 - [ ] Édition plein-écran (grille agrandie, navigation fluide).
 - [ ] Historique « Calvados » complet + restauration.
 - [ ] Tests unitaires dédiés + playtest.
 - [ ] Build Vite régénéré.
+
+### Livré (partiel)
+- `src/diff.js` : `diffBoards` pur et déterministe (unchanged / slides / merges / created / removed) + `diffSummary` + `validateDiff` (couverture + conservation). Indice `spawned` = spawns connus (exact) ; les explosions sont reconstructibles sans indice (unique retrait possible dans Mathic). Ambiguïté informationnelle deux-états documentée.
+- `tests/diff.test.mjs` : **19 vérifications** unitaires + test de propriété (300 transitions réelles `slideBoard`, zéro incohérence, avec et sans indice).
 
 ---
 
