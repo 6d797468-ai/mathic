@@ -1,0 +1,7 @@
+{
+  "model": "smollm-135m-math-v7-q2_k.gguf",
+  "size": 88201568,
+  "sha256": "be35b98191277902ff8188e61666be5c661bdc83ce1e560ebc58280902e5b91d",
+  "version": "1",
+  "generated": "2026-09-22T14:53:08.088Z"
+}

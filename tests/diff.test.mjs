@@ -11,9 +11,8 @@
 import {
   createBoard,
   slideBoard,
-  DIRECTIONS,
-  OPERATORS,
-} from '../src/board.js';
+} from '../src/core/board.js';
+import { DIRECTIONS, OPERATORS } from '../src/core/rules.js';
 import {
   diffBoards,
   diffSummary,

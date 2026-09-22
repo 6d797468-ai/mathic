@@ -25,30 +25,7 @@
  * par ui.js ; ce fichier ne touche jamais au DOM.
  */
 
-/**
- * Opérateurs disponibles et leurs symboles d'affichage.
- */
-export const OPERATORS = {
-  add: '+',
-  sub: '−',
-  mul: '×',
-  div: '÷',
-};
-
-/**
- * V3 « Effondrement » : nombre cible du mode libre. Une tuile qui atteint
- * EXACTEMENT cette valeur explose (disparaît + gros bonus) et libère la
- * case — c'est LA boucle éducative : le joueur joue les 4 opérateurs pour
- * amener précisément des tuiles sur la cible (ex. 48 ÷ 2 = 24).
- */
-export const TARGET_NUMBER = 24;
-
-/**
- * Plafond des valeurs : toute fusion dont le résultat dépasserait cet
- * entier est REFUSÉE (les tuiles glissent sans se fondre). Au-delà, le
- * joueur DOIT réduire (÷, −) plutôt que gonfler sans fin.
- */
-export const VALUE_CAP = 999;
+import { OPERATORS, TARGET_NUMBER, VALUE_CAP, DIRECTIONS } from './rules.js';
 
 /**
  * Crée une grille vide rows x cols.
@@ -170,15 +147,6 @@ export function isValidMerge(a, b, op) {
 
 // --- Glissement ------------------------------------------------------------
 
-/**
- * Directions normalisées de glissement.
- */
-export const DIRECTIONS = {
-  up: { dr: -1, dc: 0 },
-  down: { dr: 1, dc: 0 },
-  left: { dr: 0, dc: -1 },
-  right: { dr: 0, dc: 1 },
-};
 
 /**
  * Glisse une ligne (cellules ordonnées vers la destination) avec l'opérateur :

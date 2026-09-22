@@ -17,8 +17,8 @@ import {
   boardContains,
   createChainTracker,
   hasAnyMove,
-  TARGET_NUMBER,
-} from '../src/board.js';
+} from '../src/core/board.js';
+import { TARGET_NUMBER } from '../src/core/rules.js';
 import {
   pickTarget,
   consumeTargetTiles,

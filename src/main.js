@@ -26,8 +26,8 @@ import {
   countEmptyCells,
   minMovesToReach,
   createChainTracker,
-  OPERATORS,
-} from './board.js';
+} from './core/board.js';
+import { OPERATORS } from './core/rules.js';
 import {
   buildGrid,
   createTileManager,
@@ -71,7 +71,7 @@ import {
   TUTORIAL_CELL_A,
   TUTORIAL_CELL_B,
 } from './tutorial.js';
-import { TARGET_NUMBER } from './board.js';
+import { TARGET_NUMBER } from './core/rules.js';
 
 // Couleurs d'opérateur (miroir des règles .op-btn[data-op]) : récompenses
 // visuelles V2 (confettis, textes flottants) teintées par l'op choisi.
