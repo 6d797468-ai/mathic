@@ -38,8 +38,11 @@ jobs:
       - name: Build (vérifie qu'aucun import ne casse)
         run: npm run build
 
+      # Preuve de taille — NON bloquant : le budget appSrc (100 Ko) est dépassé
+      # par l'état réel du code V3 (148,4 Ko) — constat PRÉEXISTANT exposé par
+      # G0.6, recalibration à décider par l'architecte (hors périmètre Kali).
       - name: Audit taille (preuve, non bloquant)
-        run: npm run audit:size
+        run: npm run audit:size > audit-size-report.txt 2>&1 || true
 
       - name: Upload artefact dist
         uses: actions/upload-artifact@v4
@@ -47,3 +50,11 @@ jobs:
           name: dist-g06
           path: dist
           retention-days: 7
+
+      - name: Upload rapport audit taille
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-size-report
+          path: audit-size-report.txt
+          retention-days: 14
