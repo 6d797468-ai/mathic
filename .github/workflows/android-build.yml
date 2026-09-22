@@ -33,8 +33,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build web & sync Capacitor
+      - name: Build web & copy Capacitor
         run: npm run build:android
+
+      # cap sync (copy + update) régénère le wrapper plugins Cordova
+      # (capacitor-cordova-android-plugins) et les assets runtime — dossier
+      # gitignoré par convention Capacitor, obligatoire pour Gradle.
+      - name: Capacitor sync
+        run: npx cap sync android
 
       - name: Build debug APK
         working-directory: ./android
