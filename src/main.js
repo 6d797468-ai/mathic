@@ -56,6 +56,12 @@ import {
   coachPuzzleWin,
 } from './ai.js';
 import { createProfiler } from './profiler.js';
+import {
+  createCalvados,
+  makeEntry,
+  reversePlan,
+  calvadosContext,
+} from './history.js';
 
 // --- État -------------------------------------------------------------------
 
@@ -78,8 +84,8 @@ let tiles = null;
 let mode = 'classic';
 let movesLeft = 0; // jauge de coups restants (mode puzzle)
 let puzzleMoves = 0; // profondeur N certifiée du puzzle courant
-/** @type {(number|null)[][][]} historique pour l'Undo (mode puzzle) */
-let history = [];
+/** Pile Calvados : historique COMPLET des coups (états ± faits exacts). */
+const calvados = createCalvados();
 
 // Mathic Chain (Phase 4) : chaîne d'objectifs en < 2 coups.
 const chainTracker = createChainTracker();
@@ -231,7 +237,7 @@ function newGame() {
   busy = false;
   targetCount = 0;
   recentTargets = [];
-  history = [];
+  calvados.clear();
   chainTracker.reset();
   moveIndex = 0;
   chainWindowLeft = 0;
@@ -369,8 +375,9 @@ function handleDirection(dir) {
   }
 
   busy = true;
-  history.push({ board, score, movesLeft });
-  if (history.length > 30) history.shift();
+  // Snapshot COMPLET avant le coup : l'Undo restaure exactement cet état
+  // (score, jauge, cible, chaîne, compteur de coups).
+  const snapBefore = { score, movesLeft, target, targetCount, moveIndex, chainWindowLeft, chainCount };
   const beforeBoard = board; // avant le coup (mesure de l'espace libéré)
   board = result.board;
   score += result.gained;
@@ -426,7 +433,8 @@ function handleDirection(dir) {
 
     // 4) Nouvelle tuile + rafraîchissement visuel.
     // Équilibrage (roadmap 1.2) : spawn STRICTEMENT dans [1..5].
-    if (mode !== 'puzzle') spawnRandomTile(board, PUZZLE_STARTER_MAX);
+    let spawnInfo = null;
+    if (mode !== 'puzzle') spawnInfo = spawnRandomTile(board, PUZZLE_STARTER_MAX);
     tiles.sync(board, targetValueCells());
     updateHud();
 
@@ -443,7 +451,23 @@ function handleDirection(dir) {
     }
     if (exploded.length > 0 && mode === 'classic') announceTarget();
 
-    // 6) Fin du coup.
+    // 6) Fin du coup : on FINALISE l'entrée Calvados (faits exacts + états
+    // immuables + diff vectoriel) — la pile ne perd jamais une ligne.
+    calvados.push(
+      makeEntry({
+        before: beforeBoard,
+        after: board,
+        moves: result.moves,
+        mergedCells: result.mergedCells,
+        spawned: spawnInfo ? [spawnInfo] : [],
+        exploded,
+        gained: result.gained,
+        dir,
+        op: currentOp,
+        snap: snapBefore,
+      })
+    );
+
     setTimeout(() => {
       busy = false;
       resetIdleTimer();
@@ -483,7 +507,7 @@ function startPuzzle() {
 
   mode = 'puzzle';
   document.body.dataset.mode = 'puzzle';
-  history = [];
+  calvados.clear();
   chainTracker.reset();
   moveIndex = 0;
   chainWindowLeft = 0;
@@ -524,26 +548,43 @@ function startPuzzle() {
 }
 
 /**
- * Annule le dernier coup (Undo) — proposé par Momo quand le puzzle
- * devient insolvable, disponible en continu dans ce mode. Restaure le
- * plateau, le score ET le compteur de coups du snapshot au coup annulé.
+ * Annule le dernier coup (Undo) — proposé par Momo quand le puzzle devient
+ * insolvable, disponible en continu dans ce mode. Dépile l'entrée Calvados
+ * et la joue EN MIROIR :
+ *  - `reversePlan` fige le plan exact (dé-fusions, glissements inversés,
+ *    spawn retirés) ; `tiles.rewind` anime ce retour avec les MÊMES
+ *    éléments DOM (mêmes ids → transitions CSS en sens inverse) ;
+ *  - le snapshot complet (`snap`) restaure le score, la jauge de coups,
+ *    la cible, la chaîne et le compteur de coups ;
+ *  - `sync` fait foi : il recrée les tuiles explosées et retire les résidus.
  */
 function undoMove() {
-  if (mode !== 'puzzle' || busy || history.length === 0) return;
-  const snapshot = history.pop();
-  board = snapshot.board;
-  score = snapshot.score;
-  movesLeft = snapshot.movesLeft;
+  if (mode !== 'puzzle' || busy) return;
+  const entry = calvados.pop();
+  if (!entry) return;
+
+  board = entry.before;
+  score = entry.snap.score;
+  movesLeft = entry.snap.movesLeft;
+  target = entry.snap.target;
+  targetCount = entry.snap.targetCount;
+  moveIndex = entry.snap.moveIndex;
+  chainWindowLeft = entry.snap.chainWindowLeft;
+  chainCount = entry.snap.chainCount;
+  if (chainWindowLeft === 0) hideChain();
+  else showChain(chainCount, chainWindowLeft);
   busy = true;
 
-  // Reconstruction visuelle simple (pas d'animation de retour).
-  buildGrid(gridElement, rows, cols);
-  const tileLayer2 = gridElement.querySelector('.tile-layer');
-  tiles = createTileManager(tileLayer2, rows, cols);
+  const plan = reversePlan(entry);
+  tiles.rewind(plan);
   tiles.sync(board, targetValueCells());
   updateHud();
 
-  coachReact({ type: 'undo', score, target }).then(coachSay);
+  // L'Undo dégrise aussi l'écran de fin : on annule un dernier coup depuis
+  // un game over comme depuis une victoire, et on reprend la main.
+  hideGameOver();
+
+  coachReact({ type: 'undo', score, target, ...calvadosContext(entry) }).then(coachSay);
   setTimeout(() => {
     busy = false;
     resetIdleTimer();

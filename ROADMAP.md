@@ -19,13 +19,18 @@ L’objectif : ne jamais perdre une ligne d’historique en descendant dans le t
 ### À faire
 - [x] Différentiel de tuiles entre deux états (avant/après) — `diffBoards` (tuiles glissées, fusionnées, créées).
 - [ ] Édition plein-écran (grille agrandie, navigation fluide).
-- [ ] Historique « Calvados » complet + restauration.
+- [x] Historique « Calvados » complet + restauration.
 - [ ] Tests unitaires dédiés + playtest.
 - [ ] Build Vite régénéré.
 
 ### Livré (partiel)
 - `src/diff.js` : `diffBoards` pur et déterministe (unchanged / slides / merges / created / removed) + `diffSummary` + `validateDiff` (couverture + conservation). Indice `spawned` = spawns connus (exact) ; les explosions sont reconstructibles sans indice (unique retrait possible dans Mathic). Ambiguïté informationnelle deux-états documentée.
 - `tests/diff.test.mjs` : **19 vérifications** unitaires + test de propriété (300 transitions réelles `slideBoard`, zéro incohérence, avec et sans indice).
+- `src/history.js` : **Historique « Calvados »** — pile d'états immuables (capacité 50, LIFO). Chaque coup pousse UNE entrée : `before`/`after` (copies défensives), faits exacts du moteur (`moves`/`mergedCells`/`spawned`/`exploded`), et le diff vectoriel. `reversePlan` traduit l'entrée en plan graphique exact (dé-fusions, glissements remontés, spawns retirés) — jamais d'inférence ambiguë. `calvadosContext` livre au coach les faits chiffrés de l'Undo.
+- `src/ui.js` : ids de tuiles DOM **stables** (`data-tile-id`) + `rewind(plan)` — le retour anime les MÊMES éléments (transition CSS `left/top` en sens inverse), dé-fait les fusions en retirant le survivant et en recréant les opérandes (pop), retire les spawns ; `sync` reste l'autorité finale.
+- `src/main.js` : l'Undo (bouton ↶ + touche U) **dépile** la dernière entrée et restaure l'état COMPLET du snapshot (plateau, score, jauge « Coups restants », cible, chaîne, compteur) ; il dégrise aussi l'écran de fin (game over comme victoire). Entrées enregistrées en mode classique comme puzzle.
+- `src/ai.js` : la réplique Undo de Momo est **contextualisée** (fusions dé-faites, glissements remontés, coups restants, cible).
+- `tests/history.test.mjs` : **32 vérifications** : construction d'entrée (diff exact), `reversePlan` au pixel (dé-fusions / glissements / spawns), pile LIFO à capacité/éviction, contexte de narration + test de propriété (300 transitions réelles, zéro incohérence).
 
 ---
 

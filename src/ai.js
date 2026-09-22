@@ -172,6 +172,9 @@ const FALLBACKS = {
   undo: [
     () => 'Bien annulé ! Le chemin est rouvert, on repart propre.',
     () => 'Coup défait. Prends le temps de relire le plateau.',
+    (c) =>
+      `Coup annulé : ${c.defusions} fusion(s) dé-faite(s), ${c.glissements} glissement(s) remonté(s)${c.spawns ? `, ${c.spawns} tuile(s) retirée(s)` : ''}. Le plateau est exactement ton état précédent.`,
+    (c) => `On efface tout et on recommence, bonne décision ! Il te reste ${c.movesLeft} coup(s) pour ${c.target}.`,
   ],
   /** Euphorie Mathic Chain (roadmap 4.3). */
   combo: [
@@ -407,6 +410,11 @@ export async function coachReact(event) {
     chain: event.chain,
     op: event.op,
     freed: event.freed,
+    movesLeft: event.movesLeft,
+    defusions: event.defusions,
+    glissements: event.glissements,
+    spawns: event.spawns,
+    exploded: event.exploded,
   };
 
   // Cadence : si on vient de parler, réplique de secours immédiate (courte).
@@ -456,8 +464,11 @@ export async function coachReact(event) {
       break;
     case 'undo':
       ask =
-        'Le joueur vient d’annuler un coup dans un puzzle. ' +
-        'Encourage-le positivement, sans le juger.';
+        `Le joueur vient d’annuler un coup dans un puzzle ` +
+        `(${ctx.defusions} fusion(s) dé-faite(s), ${ctx.glissements} glissement(s) ` +
+        `remonté(s)${ctx.spawns ? `, ${ctx.spawns} tuile(s) retirée(s)` : ''}, ` +
+        `${ctx.movesLeft} coup(s) restant(s), objectif : ${ctx.target}). ` +
+        'Encourage-le positivement, sans le juger, et mentionne le coup restant.';
       break;
     case 'combo':
       ask =

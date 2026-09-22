@@ -91,6 +91,15 @@ export function createTileManager(tileLayer, rows, cols) {
   /** @type {Map<string, {value: number, row: number, col: number, el: HTMLElement}>} */
   const tiles = new Map();
 
+  /**
+   * Compteur d'identités : chaque tuile DOM reçoit un id STABLE, jamais
+   * réutilisé. Un déplacement conserve le MÊME élément (donc le même id) :
+   * la transition CSS left/top glisse sans casser l'animation. Pour les
+   * dé-fusions (Undo), les deux opérandes reçoivent de nouveaux ids —
+   * impossible de scinder un seul élément en deux.
+   */
+  let idSeq = 1;
+
   const posKey = (r, c) => `${r},${c}`;
 
   /** Positionne un élément sur la case (row, col) — calc CSS exact. */
@@ -110,6 +119,7 @@ export function createTileManager(tileLayer, rows, cols) {
   function createTile(r, c, value, withPop) {
     const el = document.createElement('div');
     el.className = `tile ${magnitudeClass(value)}`;
+    el.dataset.tileId = String(idSeq++);
     el.textContent = value;
     fitFont(el, value);
     place(el, r, c);
@@ -370,6 +380,53 @@ export function createTileManager(tileLayer, rows, cols) {
     }, strong ? 450 : 320);
   }
 
+  /**
+   * Joue l'Undo d'un coup EN MIROIR à partir d'un plan `reversePlan`
+   * (history.js) :
+   *  1. retire les tuiles créées (spawns) ;
+   *  2. dé-fait les fusions : le survivant à `to` est remplacé par deux
+   *     tuiles opérandes aux positions d'origine (pop) ;
+   *  3. remonte les glissements avec le MÊME élément (même id DOM) : la
+   *     transition CSS left/top anime le retour.
+   * La synchronisation finale (`sync`) reste l'autorité : elle recrée les
+   * tuiles explosées et retire les éventuels résidus — l'état DOM correspond
+   * exactement à `before`.
+   * @param {{splits: {to: {row:number,col:number}, operands:{row:number,col:number,value:number}[]}[],
+   *          slidesBack: {from: {row:number,col:number}, to:{row:number,col:number}, value:number}[],
+   *          spawns: {row:number,col:number,value:number}[]}} plan
+   */
+  function rewind(plan) {
+    // 1) Spawns : retirer les tuiles créées à la fin du coup annulé.
+    for (const s of plan.spawns) {
+      const t = tileAt(s.row, s.col);
+      if (!t) continue;
+      tiles.delete(posKey(s.row, s.col));
+      t.el.remove();
+    }
+
+    // 2) Fusions : le survivant redevient deux tuiles opérandes (pop-in).
+    for (const sp of plan.splits) {
+      const survivor = tileAt(sp.to.row, sp.to.col);
+      if (!survivor) continue;
+      tiles.delete(posKey(survivor.row, survivor.col));
+      survivor.el.remove();
+      for (const op of sp.operands) {
+        createTile(op.row, op.col, op.value, true);
+      }
+    }
+
+    // 3) Glissements : le même élément repart vers l'origine (CSS transition).
+    for (const s of plan.slidesBack) {
+      const t = tileAt(s.to.row, s.to.col);
+      if (!t) continue;
+      tiles.delete(posKey(t.row, t.col));
+      t.row = s.from.row;
+      t.col = s.from.col;
+      tiles.set(posKey(t.row, t.col), t);
+      place(t.el, s.from.row, s.from.col);
+    }
+  }
+
   return {
     slide,
     sync,
@@ -379,6 +436,7 @@ export function createTileManager(tileLayer, rows, cols) {
     explode,
     bumpScore,
     screenShake,
+    rewind,
     tileAt,
   };
 }
