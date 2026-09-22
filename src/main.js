@@ -407,7 +407,7 @@ function handleDirection(dir) {
     return;
   }
 
-  if (USE_GAME_ADAPTER) {
+  if (USE_GAME_ADAPTER && mode === 'classic') {
     handleDirectionViaAdapter(dir);
     return;
   }

@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test && node tests/playtest-puzzle.mjs && node tests/runtime/game-adapter.test.mjs && node tests/runtime/input-command.test.mjs",
+    "test": "node --test && node tests/playtest-puzzle.mjs",
     "test:runtime": "node tests/runtime/game-adapter.test.mjs && node tests/runtime/input-command.test.mjs",
     "serve:https": "node scripts/https-server.mjs",
     "audit:size": "node scripts/audit-size.mjs",
