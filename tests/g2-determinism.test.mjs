@@ -88,7 +88,18 @@ console.log('— G2-PRNG : clone indépendant —');
   for (let i = 0; i < 100 && ok; i++) {
     if (r.next() !== c.next()) ok = false;
   }
-  check('clone suit la même séquence', ok);
+  check('clone frais suit la même séquence', ok);
+
+  // Regression K1 : un clone à MI-SÉQUENCE doit repartir de l'état interne
+  // courant (et pas de la seed initiale). Le premier clone naïf échouait.
+  const r2 = createRng(11);
+  for (let i = 0; i < 7; i++) r2.next();
+  const c2 = r2.clone();
+  let ok2 = true;
+  for (let i = 0; i < 100 && ok2; i++) {
+    if (r2.next() !== c2.next()) ok2 = false;
+  }
+  check('clone à mi-séquence (après 7 tirages) suit la même séquence', ok2);
 }
 
 console.log('— G2-PRNG : 3 flux séparés —');
