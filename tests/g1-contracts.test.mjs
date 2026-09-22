@@ -7,14 +7,21 @@
  * Usage : node tests/g1-contracts.test.mjs
  */
 
-import { createBoard, slideBoard, computeMerge, isValidMerge } from '../src/core/board.js';
+import { createBoard, slideBoard, computeMerge, isValidMerge, spawnRandomTile, fillInitialTiles } from '../src/core/board.js';
 import { OPERATORS, TARGET_NUMBER, VALUE_CAP, DIRECTIONS } from '../src/core/rules.js';
 import {
+  createGameStartedEvent,
+  createMoveAppliedEvent,
+  createMoveRejectedEvent,
   createMergeEvent,
   createTargetCollapsedEvent,
   createTileSpawnedEvent,
+  createUndoAppliedEvent,
+  createLevelCompletedEvent,
   createGameOverEvent,
+  isPureEvent,
 } from '../src/core/events.js';
+import { createRng } from '../src/random.js';
 
 let failures = 0;
 function check(name, cond) {
@@ -68,6 +75,41 @@ console.log('— G1-RULES-V1 : Cible TARGET_NUMBER (fusion vers 24) —');
   check('cible 24 : fusion vers 24', r.mergedCells.length === 1 && r.mergedCells[0].value === 24);
 }
 
+// --- G1-RULES-V1 : Spawn naturel confiné [1,5] (K2/E4) ---
+
+console.log('— G1-RULES-V1 : spawn naturel confiné à [1,5] —');
+{
+  const b = createBoard(8, 8);
+  fillInitialTiles(b, 20, 5, createRng(7));
+  let inRange = true;
+  for (const row of b) {
+    for (const cell of row) {
+      if (cell !== null && (cell < 1 || cell > 5)) inRange = false;
+    }
+  }
+  check('fillInitialTiles : toutes les tuiles ∈ [1,5]', inRange);
+}
+{
+  const b = createBoard(40, 40);
+  const rng = createRng(13);
+  let ok = true;
+  for (let i = 0; i < 200; i++) {
+    const t = spawnRandomTile(b, 5, rng);
+    if (t === null || t.value < 1 || t.value > 5) ok = false;
+  }
+  check('spawnRandomTile ×200 : valeurs ∈ [1,5]', ok);
+}
+{
+  // spawn sans rng = viol du contrat G2 → doit THROW (pas de fallback Math.random)
+  let threw = false;
+  try {
+    spawnRandomTile(createBoard(3, 3), 5, undefined);
+  } catch {
+    threw = true;
+  }
+  check('spawnRandomTile sans rng → throw (aucun fallback)', threw);
+}
+
 // --- G1-STATE-V1 ----------------------------------------------------------------
 
 console.log('— G1-STATE-V1 : sérialisabilité —');
@@ -113,6 +155,54 @@ console.log('— G1-EVENTS-V1 : POJO purs —');
   check('GAME_OVER type', e.type === 'GAME_OVER');
   check('GAME_OVER victory', e.victory === true);
   check('GAME_OVER score', e.score === 500);
+}
+
+console.log('— G1-EVENTS-V1 : couverture 9/9 + pureté (K2/E2) —');
+{
+  const e = createGameStartedEvent({ sessionId: 'sess-1', mode: 'free', rows: 4, cols: 4, target: 24, moves: null });
+  check('GAME_STARTED type', e.type === 'GAME_STARTED');
+  check('GAME_STARTED mode', e.mode === 'free');
+  check('GAME_STARTED fields', e.rows === 4 && e.cols === 4 && e.target === 24 && e.moves === null);
+  check('GAME_STARTED pur', isPureEvent(e));
+}
+{
+  const e = createMoveAppliedEvent({ moveIndex: 2, dir: 'right', op: 'add', moved: true, gained: 8, mergedCells: [{ row: 0, col: 3, value: 8 }], invalidCells: [] });
+  check('MOVE_APPLIED type', e.type === 'MOVE_APPLIED');
+  check('MOVE_APPLIED moved', e.moved === true);
+  check('MOVE_APPLIED gained', e.gained === 8);
+  check('MOVE_APPLIED pur', isPureEvent(e));
+}
+{
+  const e = createMoveRejectedEvent({ moveIndex: 3, dir: 'left', op: 'sub', reason: 'no-move' });
+  check('MOVE_REJECTED type', e.type === 'MOVE_REJECTED');
+  check('MOVE_REJECTED reason', e.reason === 'no-move');
+  check('MOVE_REJECTED pur', isPureEvent(e));
+}
+{
+  const e = createUndoAppliedEvent({ moveIndex: 2 });
+  check('UNDO_APPLIED type', e.type === 'UNDO_APPLIED');
+  check('UNDO_APPLIED moveIndex', e.moveIndex === 2);
+  check('UNDO_APPLIED pur', isPureEvent(e));
+}
+{
+  const e = createLevelCompletedEvent({ moves: 5, optimalMoves: 4, score: 120 });
+  check('LEVEL_COMPLETED type', e.type === 'LEVEL_COMPLETED');
+  check('LEVEL_COMPLETED moves', e.moves === 5 && e.optimalMoves === 4);
+  check('LEVEL_COMPLETED score', e.score === 120);
+  check('LEVEL_COMPLETED pur', isPureEvent(e));
+}
+{
+  const events = [
+    createMergeEvent({ moveIndex: 1, op: 'add', cells: [{ row: 0, col: 0, value: 2 }], gained: 4 }),
+    createTargetCollapsedEvent({ cells: [{ row: 0, col: 0 }], bonus: 100 }),
+    createTileSpawnedEvent({ row: 1, col: 2, value: 3 }),
+    createGameOverEvent({ victory: true, score: 500 }),
+  ];
+  check('merges/spawns/gameover : isPureEvent sur les 4 restants', events.every(isPureEvent));
+}
+{
+  const e = { type: 'CORROMPU', timestamp: 1, fn: () => {}, 'document': {} };
+  check('isPureEvent rejette une fonction/DOM', !isPureEvent(e));
 }
 
 if (failures > 0) {
