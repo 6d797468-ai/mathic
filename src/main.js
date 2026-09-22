@@ -57,6 +57,10 @@ import {
 } from './ai.js';
 import { createProfiler } from './profiler.js';
 import { createAudioManager } from './audio.js';
+// K2+K4 (Équipe Kali) : pont GameAdapter — inactif tant que USE_GAME_ADAPTER
+// est false (l'app legacy reste la voie par défaut tant que l'intégration
+// réelle au Core V4 n'est pas effectuée).
+import { createAdapter } from './runtime/game-adapter.js';
 import {
   createCalvados,
   makeEntry,
@@ -113,6 +117,13 @@ let chainCount = 0;
 // Résonance V2 : nombre de coups RÉUSSIS (avec fusion) d'affilée — le pitch
 // des fusions monte d'un demi-ton à chaque pas (ascension harmonique).
 let mergeStreak = 0;
+
+// K2+K4 — feature flag : false → chemin legacy inchangé (par défaut).
+// true → la logique passe par le GameAdapter (session POJO), l'UI consomme
+// les faits moteur transportés dans les événements. Aucune règle ici.
+const USE_GAME_ADAPTER = false;
+/** @type {ReturnType<typeof createAdapter>|null} */
+let adapter = null;
 
 // --- Moteur audio + éléments DOM -------------------------------------------
 
@@ -393,6 +404,11 @@ function handleDirection(dir) {
   // Pendant la découverte, seul le geste qui fusionne 2+3 est accepté.
   if (mode === 'tutorial') {
     handleTutorialDirection(dir);
+    return;
+  }
+
+  if (USE_GAME_ADAPTER && mode === 'classic') {
+    handleDirectionViaAdapter(dir);
     return;
   }
 
@@ -892,11 +908,19 @@ newGameButton.addEventListener('click', () => {
     replayTutorial();
     return;
   }
+  if (USE_GAME_ADAPTER) {
+    restartAdapterGame();
+    return;
+  }
   newGame();
 });
 restartButton.addEventListener('click', () => {
   if (!isTutorialDone()) {
     replayTutorial();
+    return;
+  }
+  if (USE_GAME_ADAPTER) {
+    restartAdapterGame();
     return;
   }
   newGame();
@@ -913,6 +937,7 @@ sizeSelect.addEventListener('change', () => {
   rows = r;
   cols = c;
   if (mode === 'tutorial') replayTutorial();
+  else if (USE_GAME_ADAPTER) restartAdapterGame();
   else newGame();
 });
 
@@ -1097,12 +1122,120 @@ if (
   });
 }
 
+// --- K2+K4 : chemin GameAdapter (feature flag) --------------------------------------
+// Le runtime ne connaît pas les internes du moteur : il parle le contrat
+// GameAdapter. Décision mathématique = adapter/moteur · affichage = renderer
+// (tiles.sync) · sons/overlay = listeners d'événements. Aucune règle ici.
+
+function startAdapterGame() {
+  adapter = createAdapter('v3', { rows, cols, target: TARGET_NUMBER, initialTiles: Math.max(4, cols) });
+  mode = 'classic';
+  document.body.dataset.mode = 'classic';
+  board = createBoard(rows, cols);
+  score = 0;
+  target = TARGET_NUMBER;
+  targetCount = 0;
+  busy = false;
+  moveIndex = 0;
+  mergeStreak = 0;
+  chainWindowLeft = 0;
+  chainCount = 0;
+  hideChain();
+  buildGrid(gridElement, rows, cols);
+  const tileLayer = gridElement.querySelector('.tile-layer');
+  tiles = createTileManager(tileLayer, rows, cols);
+
+  adapter.subscribe(onAdapterEvent);
+  adapter.start();
+  board = adapter.getState().board;
+
+  updateHud();
+  tiles.sync(board, targetValueCells());
+  hideGameOver();
+  resetIdleTimer();
+  coachWelcome({ target }).then(coachSay);
+  announceTarget();
+}
+
+function handleDirectionViaAdapter(dir) {
+  const ok = adapter.move(dir, currentOp);
+  if (!ok) {
+    // Raison portée par l'événement MOVE_REJECTED — l'audio réagit au fait,
+    // il ne re-décide pas si le coup était valide.
+    audio.playError();
+  }
+}
+
+function restartAdapterGame() {
+  startAdapterGame();
+}
+
+function onAdapterEvent(event) {
+  const s = adapter.getState();
+  board = s.board;
+  score = s.score;
+  moveIndex = s.moveIndex;
+
+  switch (event.type) {
+    case 'MOVE_APPLIED': {
+      busy = true;
+      audio.playMove();
+      const mergeCount = (event.mergedCells || []).length;
+      if (mergeCount > 0) {
+        mergeStreak += 1;
+        audio.playMerge(mergeStreak + mergeCount - 1);
+      } else {
+        mergeStreak = 0;
+      }
+      tiles.slide(event.moves || [], event.mergedCells || [], { confettiColor: OP_COLORS[currentOp] });
+      if (mergeCount > 0) {
+        setTimeout(() => {
+          for (const mc of event.mergedCells || []) {
+            tiles.spawnFloatingText(mc.row, mc.col, `${OP_SYMBOLS[currentOp]}${mc.value}`, OP_COLORS[currentOp]);
+          }
+        }, MOVE_DURATION + 50);
+      }
+      if ((event.invalidCells || []).length > 0) {
+        tiles.shake(event.invalidCells);
+        tiles.screenShake({ strong: event.invalidCells.length > 2 });
+        audio.playError();
+      }
+      break;
+    }
+    case 'TARGET_COLLAPSED': {
+      targetCount += (event.cells || []).length; // le score vient de la session (getState) — aucun double comptage
+      tiles.explode(event.cells || [], event.bonus || 0, { combo: !!event.isCombo });
+      tiles.bumpScore(scoreElement);
+      audio.playExplode(event.isCombo ? 2 : 1);
+      break;
+    }
+    case 'TILE_SPAWNED': {
+      tiles.sync(board, targetValueCells());
+      updateHud();
+      setTimeout(() => {
+        busy = false;
+        resetIdleTimer();
+        if (s.isGameOver) showGameOver();
+      }, SPAWN_DURATION);
+      break;
+    }
+    case 'GAME_OVER': {
+      updateHud();
+      break;
+    }
+    default:
+      break; // MERGE_OCCURRED / MOVE_REJECTED / UNDO_APPLIED : traités par leurs propres flux
+  }
+}
+
 // --- Démarrage -----------------------------------------------------------------------
 
 syncAudioUI();
 // Un tout nouveau joueur entre par le tutoriel FTUE, pas par une grille au hasard.
 if (!isTutorialDone()) {
   startTutorial();
+} else if (USE_GAME_ADAPTER) {
+  startAdapterGame();
 } else {
   newGame();
 }
