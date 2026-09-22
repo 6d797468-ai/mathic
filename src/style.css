@@ -185,7 +185,8 @@ h1 {
 #btn-undo,
 #btn-puzzle,
 #btn-profile,
-#btn-fs {
+#btn-fs,
+#btn-install {
   min-height: 48px;
   padding: 0 16px;
   font-size: 18px;
@@ -210,7 +211,8 @@ body[data-mode='puzzle'] #btn-undo {
 #btn-undo:active,
 #btn-puzzle:active,
 #btn-profile:active,
-#btn-fs:active {
+#btn-fs:active,
+#btn-install:active {
   transform: scale(0.94);
 }
 
@@ -218,8 +220,23 @@ body[data-mode='puzzle'] #btn-undo {
 #btn-undo:hover,
 #btn-puzzle:hover,
 #btn-profile:hover,
-#btn-fs:hover {
+#btn-fs:hover,
+#btn-install:hover {
   background: #2e3350;
+}
+
+/* Bouton d'installation PWA : sous la rangée d'actions, tout en contraste. */
+#btn-install {
+  display: block;
+  margin: 14px auto 0;
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+#btn-install[hidden] {
+  display: none;
 }
 
 /* Bouton plein écran : l'état actif est signalé (accent) */

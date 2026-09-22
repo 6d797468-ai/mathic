@@ -10,14 +10,15 @@
  *  - Navigations et autres requêtes : réseau d'abord, cache en secours.
  */
 
-const VERSION = 'mathic-v1';
+const VERSION = 'mathic-v2';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
 const SHELL_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
+  '/manifest.json',
+  '/favicon.svg',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
 ];

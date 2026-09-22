@@ -6,9 +6,25 @@
 
 ---
 
-## Phase 5 — ⬜ NON COMMENCÉE (à définir)
-**Objectif** : pas encore spécifié dans les tickets.
-État : aucune édition — lancera suite à la Phase 4.
+## Phase 5 — « PWA & Finalisation Mobile » ✅ LIVRÉE
+En faire une véritable application mobile autonome : installable sur l'écran
+d'accueil, 100 % hors-ligne via service worker, expérience tactile sécurisée.
+
+### À faire
+- [x] Manifeste PWA complet (`public/manifest.json` : name, short_name, display standalone, orientation portrait, theme_color/background_color #12141c, icônes 192/512 any + maskable, `id`).
+- [x] Métas head : `manifest` lié, `theme-color`, `apple-touch-icon`, `apple-mobile-web-app-title`, status bar black-translucent.
+- [x] Viewport sécurisé : `width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover`.
+- [x] Icônes générées (`scripts/gen-icons.mjs`, sans dépendance) : `icon-192.png` / `icon-512.png`.
+- [x] Service worker `public/sw.js` (v2) : app shell **cache-first** (navigation hors-ligne totale) + gros binaires (GGUF 88 Mo, wllama.wasm) mis en cache **progressivement par plages** (Range) — le modèle reste disponible hors-ligne une fois téléchargé, sinon fallback texte de Momo.
+- [x] Installation native pilotée depuis `main.js` : `beforeinstallprompt` intercepté/stocké → bouton « 📲 Installer MATHIC » affiché dynamiquement → `.prompt()` au clic ; masqué après install/choix. (Logique déplacée hors du script inline.)
+- [x] Build certifié : artefacts PWA régénérés dans `dist/` (manifest.json, sw.js, icônes, favicon).
+
+### Livré
+- `public/manifest.json` : manifeste PWA complet (standalone, portrait, couleurs du design, icônes `any` + `maskable`).
+- `public/sw.js` (v2 — `mathic-v2`) : `addAll` de l'app shell (/, index.html, manifest.json, favicon, icônes) + `skipWaiting`/`claim` ; cache-first pour les assets ; **cache par plages** (Range 206) pour le GGUF et le wasm (stocks par `url::start-end`) — objectif : départ instantané en mode avion.
+- `src/main.js` : cycle de vie d'installation complet (`beforeinstallprompt` → stockage → `prompt()` au clic → `appinstalled`), enregistrement du service worker en production.
+- `index.html` : head PWA complet (theme-color, manifest, apple-touch-icon, apple-mobile-web-app-title, status bar) + viewport anti-zoom accidentel (`maximum-scale=1, user-scalable=no, viewport-fit=cover`).
+- Tests : **54/54** (logique) · **19/19** (diff) · **32/32** (Calvados) · Playtest **50/50** · Build ✓ · artefacts PWA présents dans `dist/`.
 
 ---
 

@@ -108,6 +108,7 @@ const newGameButton = document.querySelector('#new-game');
 const puzzleButton = document.querySelector('#btn-puzzle');
 const undoButton = document.querySelector('#btn-undo');
 const fullscreenButton = document.querySelector('#btn-fs');
+const installButton = document.querySelector('#btn-install');
 const movesLeftElement = document.querySelector('#moves-left');
 const sizeSelect = document.querySelector('#board-size-select');
 const hintButton = document.querySelector('#btn-hint');
@@ -776,6 +777,60 @@ document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
 if (fullscreenButton) {
   fullscreenButton.addEventListener('click', toggleFullscreen);
+}
+
+// --- PWA — installation native + hors-ligne total (Phase 5) --------------------
+
+// L'événement `beforeinstallprompt` (Chrome/Android, Edge) est intercepté et
+// conservé : l'invite native ne peut être déclenchée QUE via .prompt() sur
+// demande explicite de l'utilisateur (bonnes pratiques d'installation).
+let deferredInstallPrompt = null;
+
+function showInstallButton() {
+  if (installButton) installButton.hidden = false;
+}
+
+function hideInstallButton() {
+  if (installButton) installButton.hidden = true;
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e; // stocké → .prompt() au clic
+  showInstallButton();
+});
+
+if (installButton) {
+  installButton.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt(); // invite d'installation native de la plateforme
+    try {
+      await deferredInstallPrompt.userChoice; // résultat (accepted / dismissed)
+    } catch {
+      /* choix annulé : non bloquant */
+    }
+    deferredInstallPrompt = null;
+    hideInstallButton();
+  });
+}
+
+// App déjà installée : le bouton ne doit plus jamais apparaître.
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  hideInstallButton();
+});
+
+// Enregistrement du service worker (cache hors-ligne). Production seulement —
+// en dev, Vite ne sert pas /sw.js à la racine de manière fiable.
+if (
+  'serviceWorker' in navigator &&
+  (location.protocol === 'https:' || location.hostname === 'localhost')
+) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* hors-ligne optionnel : échec non bloquant */
+    });
+  });
 }
 
 // --- Démarrage -----------------------------------------------------------------------
