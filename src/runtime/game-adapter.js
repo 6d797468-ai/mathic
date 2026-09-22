@@ -203,6 +203,12 @@ export function createMockAdapter({ rows = 4, cols = 4, target = 24, seed = 42, 
 // ---------------------------------------------------------------------------
 
 export function createV3Adapter({ rows = 4, cols = 4, target = 24, initialTiles = 8, movesLeft = null } = {}) {
+  // Barème de score de la session V3 — PARITÉ avec le chemin legacy
+  // (main.js TARGET_BONUS/HIT_BONUS). La règle de score appartient à la
+  // session (couche moteur), jamais à l'UI. À déplacer dans le contrat
+  // Core lors de l'intégration GameCore V4.
+  const TARGET_BONUS = 500; // bonus par effondrement
+  const HIT_BONUS = 100;    // par tuile-cible supplémentaire (multi-explosion)
   const state = makeState({ rows, cols, target, seedLabel: 'v3' });
   state.movesLeft = movesLeft;
   const listeners = new Set();
@@ -233,12 +239,12 @@ export function createV3Adapter({ rows = 4, cols = 4, target = 24, initialTiles 
       const result = slideBoard(state.board, dir, op);
       if (!result.moved) { emit(makeEvent('MOVE_REJECTED', { reason: 'no_move', dir, op, invalidCells: result.invalidCells })); return false; }
 
-      // Effondrement cible : logique V3 (main.js:327) reformulée ici en lecture
-      // pure du résultat moteur — le résultat reste celui du moteur, l'adapter
-      // ne réécrit aucune règle (les tuiles === target sont consommées).
+      // Effondrement cible V3 : TOUTES les tuiles === target sont consommées
+      // d'un coup (groupe), bonus de groupe 500 + 100×(n−1) — parité exacte
+      // avec le chemin legacy. La règle vit ICI (session), pas dans l'UI.
       const exploded = [];
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-        if (result.board[r][c] === state.target) exploded.push({ row: r, col: c, value: state.target });
+        if (result.board[r][c] === state.target) exploded.push({ row: r, col: c });
       }
 
       calvados.push({ before: clone(), afterFacts: { dir, op }, at: state.moveIndex });
@@ -247,21 +253,38 @@ export function createV3Adapter({ rows = 4, cols = 4, target = 24, initialTiles 
       state.score += result.gained;
       if (state.movesLeft !== null) state.movesLeft = Math.max(0, state.movesLeft - 1);
 
-      emit(makeEvent('MOVE_APPLIED', { moveIndex: state.moveIndex, dir, op, gained: result.gained }));
+      // K2/K4 : le fait moteur est transporté TEL QUEL (trajectoires, fusions,
+      // contacts invalides) — le Renderer transforme, il n'invente rien.
+      emit(
+        makeEvent('MOVE_APPLIED', {
+          moveIndex: state.moveIndex,
+          dir,
+          op,
+          gained: result.gained,
+          moves: result.moves,
+          mergedCells: result.mergedCells,
+          invalidCells: result.invalidCells,
+        })
+      );
       for (const m of result.mergedCells) {
         emit(makeEvent('MERGE_OCCURRED', { moveIndex: state.moveIndex, op, cells: [{ row: m.row, col: m.col, value: m.value }], gained: m.value }));
       }
-      for (const e of exploded) emit(makeEvent('TARGET_COLLAPSED', { cells: [{ row: e.row, col: e.col }], bonus: state.target, isCombo: false }));
-      state.score += exploded.length * state.target;
+      if (exploded.length > 0) {
+        const bonus = TARGET_BONUS + (exploded.length - 1) * HIT_BONUS;
+        state.score += bonus;
+        emit(makeEvent('TARGET_COLLAPSED', { cells: exploded, bonus, isCombo: false }));
+      }
 
       const spawnInfo = spawn();
       if (spawnInfo) emit(makeEvent('TILE_SPAWNED', { moveIndex: state.moveIndex, cell: spawnInfo }));
 
-      if (exploded.length > 0) { state.victory = true; }
+      // V3 « Effondrement » classique : atteindre la cible n'achève PAS la
+      // partie (la case se libère, le score est crédité) — fin uniquement
+      // sur blocage complet ou jauge épuisée (mode puzzle).
       const blocked = !['add', 'sub', 'mul', 'div'].some((o) => hasAnyMove(state.board, o));
-      if (state.victory || state.movesLeft === 0 || blocked) {
+      if (state.movesLeft === 0 || blocked) {
         state.isGameOver = true;
-        emit(makeEvent('GAME_OVER', { victory: state.victory, score: state.score }));
+        emit(makeEvent('GAME_OVER', { victory: false, score: state.score }));
       }
       return true;
     },
