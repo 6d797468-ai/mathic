@@ -10,12 +10,19 @@
     "test": "node --test && node tests/playtest-puzzle.mjs",
     "serve:https": "node scripts/https-server.mjs",
     "audit:size": "node scripts/audit-size.mjs",
-    "gen:icons": "node scripts/gen-icons.mjs"
+    "gen:icons": "node scripts/gen-icons.mjs",
+    "gen:android": "node scripts/generate-android-icons.mjs",
+    "build:android": "vite build && npx cap copy android",
+    "android:sync": "npx cap sync android"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "sharp": "^0.35.4",
     "vite": "^8.3.0"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
     "@wllama/wllama": "^3.6.1"
   }
 }

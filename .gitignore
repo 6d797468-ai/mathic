@@ -19,6 +19,14 @@ dist-ssr
 # Certificats locaux (auto-signés, jamais commités)
 certs/
 
+# Wrapper natif Capacitor/Android : le CODE est commité, les artefacts non
+android/.gradle/
+android/build/
+android/app/build/
+android/app/build/outputs/
+android/local.properties
+android/.idea/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -96,7 +96,9 @@ Le socle : jeu de fusion 2048 étendu avec 4 opérateurs.
 - **Phase 1** ✅ Édition « Juiciness » : moteur audio 100 % synthèse (Web Audio, zéro asset), résonance harmonique des combos (pitch +1 demi-ton / fusion d'affilée), squash & stretch des tuiles, confettis aux couleurs de l'opérateur, textes flottants des opérations, bouton 🔊/🔇 persistant.
 - **Phase 2** ✅ (absorbée en Phase 1 : bruitages de synthèse + mute).
 - **Phase 3** ✅ FTUE : tutoriel in-game scripté (niveau 3+3→6, overlay à trous de lumière clip-path, main fantôme 👆, LLM court-circuité pendant l'initiation, `mathic_tutorial_done`).
-- **Phase 4** ⬜ Encapsulation native (Capacitor/TWA) → APK/AAB Play Store.
+- **Phase 4** ✅ Encapsulation native : wrapper **Capacitor 8** (`@capacitor/core|cli|android`, `com.mathic.game`), plein écran immersif natif (`MainActivity.java` masque les barres système en continu), orientation **verrouillée portrait** (`screenOrientation`), icônes adaptatives + splash Jetpack générés depuis `icon-512.png` (`scripts/generate-android-icons.mjs`), modèle GGUF embarqué dans `assets/public` → IA **offline** dans l'APK.
+  - **Compiler l'APK** (sur une machine avec SDK Android + JDK 17+) : `npm run build:android` puis ouvrir `android/` dans Android Studio → Build › Build App Bundle/APK ; ou `cd android && ./gradlew assembleDebug`.
+- **Phase 5** ⬜ Publication Play Store (compte dev, formulaire de déclaration, AAB signé).
 
 ---
 

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MATHIC</string>
+    <string name="title_activity_main">MATHIC</string>
+    <string name="package_name">com.mathic.game</string>
+    <string name="custom_url_scheme">com.mathic.game</string>
+</resources>
