@@ -46,19 +46,25 @@ function defaultRng() {
  * Défusionne C en (A, B, op) valide : A opère sur B = C, avec les règles
  * STRICTES (sub : A > B ; div : A multiple de B, reste nul ; add : A === B).
  * Restriction volontaire : A, B ∈ [1..30] pour des valeurs lisibles.
+ *
+ * CONTRAT G2 : le `rng` est OBLIGATOIRE. Aucun fallback Math.random()
+ * n'est autorisé dans le générateur — un replay non déterministe casserait
+ * la propriété G2.
+ *
  * @param {number} c
- * @param {Object} rng — instance PRNG (createRng)
+ * @param {Object} rng — instance PRNG (createRng). OBLIGATOIRE.
  * @returns {[number, number, string]|null}
+ * @throws {Error} si rng est absent
  */
 export function unmerge(c, rng) {
+  if (!rng || typeof rng.next !== 'function') {
+    throw new Error('[G2] unmerge : rng requis (createRng). Aucun fallback Math.random().');
+  }
   const candidates = [];
-  const r = rng || defaultRng();
 
   for (let a = 1; a <= 30; a++) {
     // add : A === B → C = 2a (seulement si C pair).
     if (a === c - a && c - a >= 1) candidates.push([a, c - a, 'add']);
-  }
-  for (let a = 1; a <= 30; a++) {
     // sub : A - B = C, A > B strict, B ≥ 1.
     for (let b = 1; b < a; b++) {
       if (a - b === c) candidates.push([a, b, 'sub']);
@@ -68,7 +74,7 @@ export function unmerge(c, rng) {
   }
 
   if (candidates.length === 0) return null;
-  return r.pick(candidates);
+  return rng.pick(candidates);
 }
 
 /**

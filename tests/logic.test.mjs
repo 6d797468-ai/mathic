@@ -19,6 +19,7 @@ import {
   hasAnyMove,
 } from '../src/core/board.js';
 import { TARGET_NUMBER } from '../src/core/rules.js';
+import { createRng } from '../src/random.js';
 import {
   pickTarget,
   consumeTargetTiles,
@@ -115,7 +116,7 @@ console.log('— Équilibrage : spawn 1..5 —');
   let outOfRange = 0;
   for (let i = 0; i < 500; i++) {
     const b = createBoard(4, 4);
-    const s = spawnRandomTile(b, PUZZLE_STARTER_MAX);
+    const s = spawnRandomTile(b, PUZZLE_STARTER_MAX, createRng(i));
     if (s && (s.value < 1 || s.value > 5)) outOfRange++;
   }
   check('500 spawns : tous dans [1..5]', outOfRange === 0);
@@ -125,7 +126,7 @@ console.log('— Équilibrage : spawn 1..5 —');
   let defaultOutOfRange = 0;
   for (let i = 0; i < 500; i++) {
     const b = createBoard(4, 4);
-    const s = spawnRandomTile(b);
+    const s = spawnRandomTile(b, 5, createRng(1000 + i));
     if (s && (s.value < 1 || s.value > 5)) defaultOutOfRange++;
   }
   check('500 spawns par défaut : tous dans [1..5]', defaultOutOfRange === 0);
@@ -133,7 +134,7 @@ console.log('— Équilibrage : spawn 1..5 —');
   // fillInitialTiles par défaut : même plafond 1..5.
   let initOutOfRange = false;
   const init = createBoard(4, 4);
-  fillInitialTiles(init, 6);
+  fillInitialTiles(init, 6, 5, createRng(42));
   for (const row of init) {
     for (const v of row) {
       if (v !== null && (v < 1 || v > 5)) initOutOfRange = true;
@@ -243,7 +244,7 @@ console.log('— Générateur Coup Parfait —');
   let badUnmerge = 0;
   for (let i = 0; i < 200; i++) {
     const c = 4 + Math.floor(Math.random() * 40);
-    const r = unmerge(c);
+    const r = unmerge(c, createRng(i));
     if (r === null) continue; // certains C n'ont pas de décomposition
     const [a, b, op] = r;
     if (!isValidPair(a, b, op) || computeMerge(a, b, op) !== c) badUnmerge++;
@@ -254,7 +255,7 @@ console.log('— Générateur Coup Parfait —');
   let ok = 0;
   let shortestAllExact = true;
   for (let i = 0; i < 100; i++) {
-    const p = generatePuzzle({ rows: 4, cols: 4, moves: 3, attempts: 60 });
+    const p = generatePuzzle({ rows: 4, cols: 4, moves: 3, attempts: 60, rng: createRng(1000 + i) });
     const shortest = minMovesToReach(p.board, p.target, 3);
     if (shortest === 3) ok++;
     if (shortest !== null && shortest !== 3) shortestAllExact = false;
@@ -263,7 +264,7 @@ console.log('— Générateur Coup Parfait —');
   check('aucun puzzle accepté avec un raccourci < N', shortestAllExact);
 
   // Le puzzle retourné est atteignable en N coups (jamais moins, jamais plus).
-  const p = generatePuzzle({ rows: 4, cols: 4, moves: 3 });
+  const p = generatePuzzle({ rows: 4, cols: 4, moves: 3, rng: createRng(9999) });
   check('puzzle générique : profondeur certifiée',
     minMovesToReach(p.board, p.target, 3) === 3);
 }
@@ -373,7 +374,7 @@ console.log('— Cible explicite (42 en 4) & BFS grilles codées —');
   // 3) Cible EXPLICITE : le ticket demande 42 en exactement 4 coups certifiés.
   let exact42 = 0;
   for (let i = 0; i < 8; i++) {
-    const p = generatePuzzle({ rows: 4, cols: 4, moves: 4, target: 42, attempts: 300 });
+    const p = generatePuzzle({ rows: 4, cols: 4, moves: 4, target: 42, attempts: 300, rng: createRng(2000 + i) });
     const s = minMovesToReach(p.board, p.target, p.moves);
     if (s === 4) exact42++;
   }

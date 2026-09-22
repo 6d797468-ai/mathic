@@ -61,20 +61,26 @@ export function getEmptyCells(board) {
  * limité aux tuiles 1..5 — par défaut comme par convention d'appel. Les
  * valeurs > 5 ne s'obtiennent que par fusion.
  *
+ * CONTRAT G2 : le `rng` est OBLIGATOIRE. Aucun fallback Math.random()
+ * n'est autorisé dans le Core — un replay non déterministe casserait
+ * la propriété G2. L'appelant DOIT fournir une instance createRng().
+ *
  * @param {(number|null)[][]} board
  * @param {number} [maxValue]
- * @param {Object} [rng] — instance PRNG (createRng). Si absent, fallback
- *   Math.random() pour compatibilité (non déterministe).
+ * @param {Object} rng — instance PRNG (createRng). OBLIGATOIRE.
  * @returns {({row: number, col: number, value: number}|null)}
+ * @throws {Error} si rng est absent
  */
-export function spawnRandomTile(board, maxValue = 5, rng = null) {
+export function spawnRandomTile(board, maxValue = 5, rng) {
+  if (!rng || typeof rng.next !== 'function') {
+    throw new Error('[G2] spawnRandomTile : rng requis (createRng). Aucun fallback Math.random().');
+  }
   const empty = getEmptyCells(board);
   if (empty.length === 0) return null;
 
-  const rand = rng || { next: () => Math.random() };
-  const idx = Math.floor(rand.next() * empty.length);
+  const idx = Math.floor(rng.next() * empty.length);
   const { row, col } = empty[idx];
-  const value = 1 + Math.floor(rand.next() * maxValue);
+  const value = 1 + Math.floor(rng.next() * maxValue);
   board[row][col] = value;
   return { row, col, value };
 }
@@ -82,12 +88,19 @@ export function spawnRandomTile(board, maxValue = 5, rng = null) {
 /**
  * Remplit le plateau avec n tuiles (état de départ).
  * Tuiles limitées à 1..5 (roadmap 1.2).
+ *
+ * CONTRAT G2 : le `rng` est OBLIGATOIRE.
+ *
  * @param {(number|null)[][]} board
  * @param {number} n
  * @param {number} [maxValue]
- * @param {Object} [rng]
+ * @param {Object} rng — instance PRNG (createRng). OBLIGATOIRE.
+ * @throws {Error} si rng est absent
  */
-export function fillInitialTiles(board, n = 6, maxValue = 5, rng = null) {
+export function fillInitialTiles(board, n = 6, maxValue = 5, rng) {
+  if (!rng || typeof rng.next !== 'function') {
+    throw new Error('[G2] fillInitialTiles : rng requis (createRng). Aucun fallback Math.random().');
+  }
   for (let i = 0; i < n; i++) spawnRandomTile(board, maxValue, rng);
 }
 

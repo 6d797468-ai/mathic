@@ -27,7 +27,8 @@ import {
   minMovesToReach,
   createChainTracker,
 } from './core/board.js';
-import { OPERATORS } from './core/rules.js';
+import { OPERATORS, TARGET_NUMBER } from './core/rules.js';
+import { createRng, createRngStreams } from './random.js';
 import {
   buildGrid,
   createTileManager,
@@ -71,7 +72,6 @@ import {
   TUTORIAL_CELL_A,
   TUTORIAL_CELL_B,
 } from './tutorial.js';
-import { TARGET_NUMBER } from './core/rules.js';
 
 // Couleurs d'opérateur (miroir des règles .op-btn[data-op]) : récompenses
 // visuelles V2 (confettis, textes flottants) teintées par l'op choisi.
@@ -93,6 +93,16 @@ let idleTimer = null;
 let hintLock = false;
 /** @type {ReturnType<typeof createTileManager>|null} */
 let tiles = null;
+
+// --- RNG (G2) : flux déterministes, un par préoccupation --------------------
+/** Seed de la session courante (pour replay / debug). */
+let sessionSeed = String(Date.now());
+/** Flux game : spawn, coups, génération puzzle. */
+let gameRng = createRng(sessionSeed);
+/** Flux cosmetic : animations, réactions Momo, feedback visuel. */
+let cosmeticRng = createRng(sessionSeed ^ 0xDEADBEEF);
+/** Flux puzzle : génération rétro-ingénierie. */
+let puzzleRng = createRng(sessionSeed ^ 0xCAFEBABE);
 
 // Mode courant : 'classic' (score libre) ou 'puzzle' (Coup Parfait).
 let mode = 'classic';
@@ -259,6 +269,12 @@ function announceTarget() {
 // --- Boucle de jeu --------------------------------------------------------------
 
 function newGame() {
+  // G2 : nouvelle seed par session pour la déterminabilité.
+  sessionSeed = `classic-${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
+  gameRng = createRng(sessionSeed);
+  cosmeticRng = createRng(sessionSeed ^ 0xDEADBEEF);
+  puzzleRng = createRng(sessionSeed ^ 0xCAFEBABE);
+
   mode = 'classic';
   document.body.dataset.mode = 'classic';
   board = createBoard(rows, cols);
@@ -278,7 +294,8 @@ function newGame() {
   tiles = createTileManager(tileLayer, rows, cols);
 
   // Équilibrage (roadmap 1.2) : tuiles initiales ET spawn dans [1..5].
-  fillInitialTiles(board, Math.max(4, cols), PUZZLE_STARTER_MAX);
+  // CONTRAT G2 : rng OBLIGATOIRE (pas de fallback Math.random).
+  fillInitialTiles(board, Math.max(4, cols), PUZZLE_STARTER_MAX, gameRng);
   // V3 « Effondrement » : cible FIXE (24) — les tuiles qui l'atteignent
   // explosent et libèrent la case. Le joueur jongle avec les 4 opérateurs.
   target = TARGET_NUMBER;
@@ -354,7 +371,7 @@ function reactToMove(result, exploded, cleaning = null) {
     return;
   }
   // Hype-Man : féliciter la finesse tactique des coups de nettoyage.
-  if (cleaning && Math.random() < 0.85) {
+  if (cleaning && cosmeticRng.next() < 0.85) {
     coachReact({
       type: 'cleaningMove',
       score,
@@ -366,23 +383,23 @@ function reactToMove(result, exploded, cleaning = null) {
     return;
   }
   if (result.gained >= 12) {
-    if (Math.random() < 0.75) {
+    if (cosmeticRng.next() < 0.75) {
       coachReact({ type: 'goodMove', score, target, gained: result.gained }).then(coachSay);
     }
     return;
   }
-  if (result.invalidCells.length > 0 && Math.random() < 0.5) {
+  if (result.invalidCells.length > 0 && cosmeticRng.next() < 0.5) {
     coachReact({ type: 'invalidContact', score, target }).then(coachSay);
     return;
   }
   if (result.gained > 0) {
-    if (Math.random() < 0.35) {
+    if (cosmeticRng.next() < 0.35) {
       coachReact({ type: 'weakMove', score, target, gained: result.gained }).then(coachSay);
     }
     return;
   }
   // Rien n'a bougé : réplique occasionnelle (le joueur teste des directions).
-  if (Math.random() < 0.4) {
+  if (cosmeticRng.next() < 0.4) {
     coachReact({ type: 'noMove', score, target }).then(coachSay);
   }
 }
@@ -494,7 +511,7 @@ function handleDirection(dir) {
     // 4) Nouvelle tuile + rafraîchissement visuel.
     // Équilibrage (roadmap 1.2) : spawn STRICTEMENT dans [1..5].
     let spawnInfo = null;
-    if (mode !== 'puzzle') spawnInfo = spawnRandomTile(board, PUZZLE_STARTER_MAX);
+    if (mode !== 'puzzle') spawnInfo = spawnRandomTile(board, PUZZLE_STARTER_MAX, gameRng);
     tiles.sync(board, targetValueCells());
     updateHud();
 
@@ -565,6 +582,12 @@ function startPuzzle() {
   const level = PUZZLE_LEVELS[puzzleLevelIndex % PUZZLE_LEVELS.length];
   puzzleLevelIndex = (puzzleLevelIndex + 1) % PUZZLE_LEVELS.length;
 
+  // G2 : seed déterministe pour la session puzzle.
+  sessionSeed = `puzzle-${level.target ?? 'rand'}-${level.moves}-${Date.now()}`;
+  gameRng = createRng(sessionSeed);
+  cosmeticRng = createRng(sessionSeed ^ 0xDEADBEEF);
+  puzzleRng = createRng(sessionSeed ^ 0xCAFEBABE);
+
   mode = 'puzzle';
   document.body.dataset.mode = 'puzzle';
   calvados.clear();
@@ -584,11 +607,13 @@ function startPuzzle() {
   const tileLayer = gridElement.querySelector('.tile-layer');
   tiles = createTileManager(tileLayer, rows, cols);
 
+  // CONTRAT G2 : rng OBLIGATOIRE pour la génération déterministe.
   const generated = generatePuzzle({
     rows,
     cols,
     moves: level.moves,
     target: level.target,
+    rng: puzzleRng,
   });
   board = generated.board;
   target = generated.target;
