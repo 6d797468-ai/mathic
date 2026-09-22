@@ -29,7 +29,8 @@
  * Logique pure, sans DOM. Identique aux conventions du repo.
  */
 
-import { isValidPair, computeMerge, OPERATORS } from './board.js';
+import { isValidPair, computeMerge } from './core/board.js';
+import { OPERATORS } from './core/rules.js';
 
 const OPS = Object.keys(OPERATORS); // ['add', 'sub', 'mul', 'div']
 

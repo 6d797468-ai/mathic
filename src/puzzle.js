@@ -19,9 +19,9 @@
 import {
   createBoard,
   slideBoard,
-  DIRECTIONS,
   minMovesToReach,
-} from './board.js';
+} from './core/board.js';
+import { DIRECTIONS } from './core/rules.js';
 
 /** Valeur max des tuiles de départ ET de bruit (roadmap 1.2). */
 export const PUZZLE_STARTER_MAX = 5;

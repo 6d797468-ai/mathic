@@ -9,9 +9,8 @@ import {
   slideBoard,
   boardContains,
   minMovesToReach,
-  DIRECTIONS,
-  OPERATORS,
-} from '../src/board.js';
+} from '../src/core/board.js';
+import { DIRECTIONS, OPERATORS } from '../src/core/rules.js';
 import { generatePuzzle } from '../src/puzzle.js';
 
 const DIRS = Object.keys(DIRECTIONS);

@@ -12,7 +12,7 @@
  * Logique pure, sans DOM. Réutilise les règles de board.js.
  */
 
-import { isValidPair, computeMerge } from './board.js';
+import { isValidPair, computeMerge } from './core/board.js';
 
 /** Fourchette de cibles générées. */
 export const TARGET_MIN = 6;

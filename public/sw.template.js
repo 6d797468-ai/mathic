@@ -1,16 +1,26 @@
 /**
- * sw.js — Service worker hors-ligne de MATHIC
+ * sw.template.js — Template du Service Worker hors-ligne de MATHIC
  *
- * Stratégies :
+ * CE FICHIER EST UN TEMPLATE. Il ne doit PAS être servi directement.
+ *
+ * Le fichier dist/sw.js final est généré par scripts/build-sw.mjs :
+ *   __SW_VERSION__ → remplacé par 'mathic-v4-<commit>-<buildHash>'
+ *
+ * Vérification post-build obligatoire :
+ *   grep "const VERSION" dist/sw.js
+ *   # Ne doit JAMAIS retourner '__SW_VERSION__'
+ *
+ * Stratégies de cache :
  *  - App shell (HTML/JS/CSS/icônes) : cache au premier chargement.
- *  - Gros assets (modèle GGUF ~85 Mo, wasm) : mis en cache PROGRESSIVEMENT
- *    via un cache par plages (Range requests), car l'objet Response complet
- *    de 85 Mo dépasse les limites pratiques. Le modèle est téléchargé par
- *    wllama en morceaux → chaque morceau servi du cache après 1er passage.
+ *  - Gros assets (modèle GGUF, wasm) : cache progressif par plages
+ *    (Range requests). Le modèle est téléchargé par wllama en morceaux →
+ *    chaque morceau est servi depuis le cache après le 1er passage.
  *  - Navigations et autres requêtes : réseau d'abord, cache en secours.
+ *
+ * Gate : G0.5.1
  */
 
-const VERSION = 'mathic-v2';
+const VERSION = '__SW_VERSION__';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -68,7 +78,12 @@ self.addEventListener('activate', (event) => {
 
 /**
  * Répond à une requête Range depuis le cache d'assets.
- * Les morceaux sont stockés par clé `${url}::${start}-${end}`.
+ * Les morceaux sont stockés par clé `${origin}${pathname}::${start}-${end}`,
+ * avec un header Content-Range persistent pour pouvoir reconstruire le
+ * totalSize lors d'une lecture ultérieure.
+ *
+ * Bug P0 G0.5.3 corrigé : l'ancienne version retournait totalSize='*'
+ * quand Content-Range était absent du cache (il n'était jamais stocké).
  */
 async function serveRange(request, cache) {
   const url = new URL(request.url);
@@ -80,20 +95,37 @@ async function serveRange(request, cache) {
   const end = match[2] ? Number(match[2]) : start + 1024 * 512; // 512 Ko par défaut
 
   // Cherche un morceau englobant en cache.
-  const keys = await cache.keys(`${url.pathname}::*`, { ignoreSearch: true });
-  for (const req of keys) {
+  // cache.keys() avec un pattern de préfixe n'est pas supporté nativement ;
+  // on itère sur toutes les entrées du cache et on filtre manuellement.
+  const allKeys = await cache.keys();
+  const assetKeys = allKeys.filter((req) => req.url.includes(`${url.pathname}::`) );
+
+  for (const req of assetKeys) {
     const stored = /::(\d+)-(\d+)$/.exec(req.url);
     if (!stored) continue;
     const s = Number(stored[1]);
     const e = Number(stored[2]);
     if (start >= s && end <= e) {
       const full = await cache.match(req);
+      if (!full) continue;
+
+      // Le Content-Range est toujours stocké avec l'entrée (voir fetch handler).
+      // Si absent (entrée ancienne), on ne peut pas reconstruire totalSize de
+      // façon fiable — on retourne null pour forcer un rechargement réseau.
+      const cachedRange = full.headers.get('Content-Range');
+      if (!cachedRange) return null; // P0 fix : jamais de totalSize='*'
+
+      const totalSize = cachedRange.split('/')[1];
+      if (!totalSize || totalSize === '*') return null; // défense en profondeur
+
       const buf = await full.arrayBuffer();
-      return new Response(buf.slice(start - s, end - s + 1), {
+      const sliced = buf.slice(start - s, end - s + 1);
+      return new Response(sliced, {
         status: 206,
         headers: {
           'Content-Type': 'application/octet-stream',
-          'Content-Range': `bytes ${start}-${end}/${e - s + 1}`,
+          'Content-Range': `bytes ${start}-${end}/${totalSize}`,
+          'Content-Length': String(sliced.byteLength),
         },
       });
     }
@@ -117,16 +149,27 @@ self.addEventListener('fetch', (event) => {
         if (fromCache) return fromCache;
 
         const network = await fetch(request);
-        if (network.ok) {
-          // Stocke le morceau reçu (max 2 Mo par entrée pour rester léger).
+        if (network.ok || network.status === 206) {
+          // Stocke le morceau reçu avec son Content-Range pour que serveRange
+          // puisse reconstruire totalSize lors d'une lecture ultérieure.
+          // P0 fix : Content-Range doit être persisté avec la réponse cachée.
           const rangeHeader = request.headers.get('range') || '';
           const match = /bytes=(\d+)-(\d*)/.exec(rangeHeader);
           if (match) {
+            const networkBuf = await network.clone().arrayBuffer();
             const start = Number(match[1]);
-            const end = match[2] ? Number(match[2]) : start + (await network.clone().arrayBuffer()).byteLength - 1;
+            const end = match[2] ? Number(match[2]) : start + networkBuf.byteLength - 1;
+            const contentRange = network.headers.get('Content-Range')
+              ?? `bytes ${start}-${end}/*`;
             await cache.put(
               new Request(`${url.origin}${url.pathname}::${start}-${end}`),
-              new Response(await network.clone().arrayBuffer())
+              new Response(networkBuf, {
+                headers: {
+                  'Content-Type': 'application/octet-stream',
+                  // Toujours stocker Content-Range pour que serveRange fonctionne.
+                  'Content-Range': contentRange,
+                },
+              })
             );
           }
         }

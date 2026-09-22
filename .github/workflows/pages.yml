@@ -33,8 +33,19 @@ jobs:
       - name: Installe les dépendances (verrouillées)
         run: npm ci
 
+      - name: Run test suite (G0.6.2 — obligatoire avant déploiement)
+        run: npm test
+
       - name: Build de production
         run: npm run build
+
+      - name: Vérifier que SW VERSION est concrète (jamais placeholder)
+        run: |
+          if grep -q '__SW_VERSION__' dist/sw.js; then
+            echo "ERREUR : dist/sw.js contient __SW_VERSION__ — build-sw.mjs a échoué"
+            exit 1
+          fi
+          grep "const VERSION" dist/sw.js
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

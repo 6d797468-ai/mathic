@@ -1,0 +1,72 @@
+{
+  "commit": "09a45a3",
+  "branch": "main",
+  "version": "V3",
+  "date": "2026-09-22",
+  "runtime": {
+    "node": "24.19.0",
+    "npm": "12.0.2"
+  },
+  "dependencies": {
+    "vite": "8.3.0",
+    "capacitor": "8.5.2",
+    "wllama": "3.6.1",
+    "typescript": "7.0.2"
+  },
+  "tests": {
+    "command": "npm test",
+    "suites": ["tests/logic.test.mjs", "tests/diff.test.mjs", "tests/history.test.mjs", "tests/playtest-puzzle.mjs"],
+    "status": "PASS",
+    "coverage": {
+      "board_rules": "PROVEN",
+      "diff": "PROVEN",
+      "history_undo": "PROVEN",
+      "puzzle_bfs": "PROVEN — 50/50 puzzles, 50/50 undo"
+    }
+  },
+  "build": {
+    "command": "npm run build",
+    "output": "dist/",
+    "status": "PROVEN"
+  },
+  "ci": {
+    "android_debug_apk": "PROVEN — .github/workflows/android-build.yml",
+    "github_pages": "PRESENT — provisioning non confirmé runtime",
+    "test_workflow": "MISSING — G0.6.1"
+  },
+  "runtime": {
+    "pwa_offline": "NOT-TESTED",
+    "gguf_range": "NOT-TESTED",
+    "android_webview": "NOT-TESTED"
+  },
+  "known_debts": {
+    "Math_random_in_core": "P0 — board.js:93-94, puzzle.js:34-35",
+    "SW_version_hardcoded": "P0 — public/sw.js:13 'mathic-v2'",
+    "localStorage_progression": "P1 — main.js:89,298",
+    "main_js_god_object": "P1 — 1110 lines, GameState+UI+AI+Events",
+    "no_test_ci_workflow": "P0 — npm test not in CI",
+    "puzzle_levels_hardcoded": "P1 — main.js:550-554",
+    "momo_reads_main_internals": "P0 — main.js:347-388",
+    "bfs_on_ui_thread": "P1 — board.js:492-518"
+  },
+  "artifacts": [
+    {
+      "name": "smollm-135m-math-v7-q2_k.gguf",
+      "path": "public/models/smollm-135m-math-v7-q2_k.gguf",
+      "size_bytes": 88201568,
+      "sha256": "TBD — run: node scripts/generate-model-manifest.mjs",
+      "note": "Present in remote origin/main. Size 88 201 568 bytes verified on GitHub."
+    },
+    {
+      "name": "wllama.wasm",
+      "path": "public/wllama/wllama.wasm",
+      "sha256": "TBD"
+    }
+  ],
+  "gate_status": {
+    "G0": "IN_PROGRESS",
+    "G0.5": "NOT_STARTED",
+    "G0.6": "NOT_STARTED",
+    "G1": "BLOCKED — awaiting G0.5 + G0.6"
+  }
+}
