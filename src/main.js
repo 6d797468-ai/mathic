@@ -821,13 +821,14 @@ window.addEventListener('appinstalled', () => {
 });
 
 // Enregistrement du service worker (cache hors-ligne). Production seulement —
-// en dev, Vite ne sert pas /sw.js à la racine de manière fiable.
+// en dev, Vite ne sert pas sw.js à la racine de manière fiable. Le chemin est
+// relatif : l'app fonctionne sous GitHub Pages (/mathic/) comme à la racine.
 if (
   'serviceWorker' in navigator &&
   (location.protocol === 'https:' || location.hostname === 'localhost')
 ) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    navigator.serviceWorker.register('sw.js').catch(() => {
       /* hors-ligne optionnel : échec non bloquant */
     });
   });

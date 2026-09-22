@@ -1,0 +1,49 @@
+name: deploy-pages
+
+# Déploie le build Vite sur GitHub Pages dès qu'un commit arrive sur `main`
+# (ou manuellement via le bouton « Run workflow »).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone le dépôt
+        uses: actions/checkout@v4
+
+      - name: Node 22 (requis par Vite 8)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installe les dépendances (verrouillées)
+        run: npm ci
+
+      - name: Build de production
+        run: npm run build
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Publie dist/
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Déploie
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -86,6 +86,14 @@ Le socle : jeu de fusion 2048 étendu avec 4 opérateurs.
 
 ---
 
+## Déploiement
+- **URL publique** : `https://6d797468-ai.github.io/mathic/`
+- CI : `.github/workflows/pages.yml` — build Vite sur Node 22 puis `deploy-pages` à chaque push sur `main`.
+- L'app est **relative** (`vite.config.mjs` → `base: './'`, manifest/`sw.js` résolus par scope) : elle vit aussi bien sous `/mathic/` (Pages) qu'à la racine (Netlify/Vercel).
+- Propos du service worker : le cache est **cache-first** — après chaque montée de version (`mathic-vN` invalide le cache de l'app au `activate`), rechargez l'onglet une fois pour prendre le nouveau shell.
+
+---
+
 ## Consigne d’archivage
 - `node_modules`, `dist`, `certs/` ne sont **jamais** commités.
 - Le GGUF (88 Mo) et wllama.wasm sont dans `public/` — attention à la limite GitHub de 100 Mo/fichier.

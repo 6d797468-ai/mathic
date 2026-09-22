@@ -14,20 +14,33 @@ const VERSION = 'mathic-v2';
 const SHELL_CACHE = `${VERSION}-shell`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
+/**
+ * Le site vit en sous-chemin (GitHub Pages → /mathic/) OU à la racine
+ * (Netlify/Vercel). Tout est donc résolu RELATIVEMENT au scope du worker :
+ * caches.match / addAll / keys fonctionnent dans les deux cas, sans rien
+ * câbler en dur.
+ */
+const base = self.registration.scope;
+const res = (path) => new URL(path, base).toString();
+
 const SHELL_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.svg',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  res(''),
+  res('index.html'),
+  res('manifest.json'),
+  res('favicon.svg'),
+  res('icons/icon-192.png'),
+  res('icons/icon-512.png'),
 ];
 
-/** Gros fichiers servis par plages après mise en cache progressif. */
+/** Gros fichiers servis par plages après mise en cache progressif
+ *  (chemin complet dans le scope, pour comparaison directe avec request). */
 const RANGE_ASSETS = [
-  '/models/smollm-135m-math-v7-q2_k.gguf',
-  '/wllama/wllama.wasm',
+  new URL('models/smollm-135m-math-v7-q2_k.gguf', base).pathname,
+  new URL('wllama/wllama.wasm', base).pathname,
 ];
+
+/** Préfixe des bundles hashed générés par Vite (relatif au scope). */
+const ASSETS_PREFIX = new URL('assets/', base).pathname;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -105,7 +118,7 @@ self.addEventListener('fetch', (event) => {
 
         const network = await fetch(request);
         if (network.ok) {
-          // Stocke le morceau reçu (m ax 2 Mo par entrée pour rester léger).
+          // Stocke le morceau reçu (max 2 Mo par entrée pour rester léger).
           const rangeHeader = request.headers.get('range') || '';
           const match = /bytes=(\d+)-(\d*)/.exec(rangeHeader);
           if (match) {
@@ -130,7 +143,7 @@ self.addEventListener('fetch', (event) => {
       if (cached) return cached;
       try {
         const network = await fetch(request);
-        if (network.ok && url.pathname.startsWith('/assets/')) {
+        if (network.ok && url.pathname.startsWith(ASSETS_PREFIX)) {
           const cache = await caches.open(SHELL_CACHE);
           cache.put(request, network.clone());
         }
@@ -138,7 +151,7 @@ self.addEventListener('fetch', (event) => {
       } catch (err) {
         // Hors-ligne : renvoie l'app shell pour les navigations.
         if (request.mode === 'navigate') {
-          const shell = await caches.match('/index.html');
+          const shell = await caches.match(res('index.html'));
           if (shell) return shell;
         }
         throw err;
