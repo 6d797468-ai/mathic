@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <meta name="theme-color" content="#12141c" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>MATHIC</title>
+  </head>
+  <body>
+    <header>
+      <h1>MATHIC</h1>
+      <div id="hud">
+        <div class="stat">
+          <span class="stat-label">Score</span>
+          <span id="score">0</span>
+        </div>
+        <div class="stat target-stat">
+          <span class="stat-label">Objectif</span>
+          <span id="target">?</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Record</span>
+          <span id="best">0</span>
+        </div>
+        <div class="stat gauge-stat" style="display: none;">
+          <span class="stat-label">Coups restants</span>
+          <span id="moves-left">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Taille</span>
+          <select id="board-size-select" aria-label="Taille du plateau">
+            <option value="4x4" selected>4×4</option>
+            <option value="5x5">5×5</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="board-wrap">
+        <div id="chain-badge" aria-live="polite">
+          <span id="chain-value">CHAIN ×2</span>
+          <span id="chain-window"><i></i><i></i></span>
+        </div>
+        <div id="grid" aria-label="Plateau de jeu"></div>
+      </div>
+
+      <div id="operator-bar" role="radiogroup" aria-label="Choix de l'opérateur">
+        <button type="button" class="op-btn active" data-op="add" role="radio" aria-checked="true" aria-label="Addition">+</button>
+        <button type="button" class="op-btn" data-op="sub" role="radio" aria-checked="false" aria-label="Soustraction">−</button>
+        <button type="button" class="op-btn" data-op="mul" role="radio" aria-checked="false" aria-label="Multiplication">×</button>
+        <button type="button" class="op-btn" data-op="div" role="radio" aria-checked="false" aria-label="Division">÷</button>
+      </div>
+
+      <div id="coach">
+        <div id="coach-avatar" aria-hidden="true">🤖</div>
+        <div id="coach-body">
+          <div id="coach-status">○ Momo se réveille…</div>
+          <div id="coach-text">Bienvenue !</div>
+        </div>
+      </div>
+      <div class="action-row">
+        <button id="new-game" type="button">Nouvelle partie</button>
+        <button id="btn-hint" type="button" aria-label="Indice (touche H)" title="Indice (H)">💡</button>
+        <button id="btn-undo" type="button" aria-label="Annuler le coup (touche U)" title="Annuler (U)">↶ Undo</button>
+        <button id="btn-puzzle" type="button">🧩 Coup parfait</button>
+        <button id="btn-profile" type="button" title="Profiler (P)">📊</button>
+      </div>
+      <button id="btn-install" type="button" style="display: none;" hidden>📲 Installer l'app</button>
+    </main>
+
+    <div id="game-over-overlay" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
+      <div class="overlay-card">
+        <h2 id="game-over-title">Partie terminée</h2>
+        <p>Plus aucun mouvement possible, quel que soit l'opérateur.</p>
+        <div class="overlay-stats">
+          <div class="stat">
+            <span class="stat-label">Score final</span>
+            <span id="final-score">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Objectifs</span>
+            <span id="final-targets">0</span>
+          </div>
+        </div>
+        <button id="restart" type="button">Rejouer</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+    <script>
+      // PWA : enregistre le service worker (production uniquement —
+      // en dev, Vite ne sert pas /sw.js à la racine).
+      if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {
+            /* hors-ligne optionnel : échec non bloquant */
+          });
+        });
+      }
+
+      // PWA : bouton d'installation natif Android/Chrome (prompt différé).
+      (function () {
+        let deferredPrompt = null;
+        var btn = document.getElementById('btn-install');
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          deferredPrompt = e;
+          btn.hidden = false;
+          btn.style.display = '';
+        });
+        btn.addEventListener('click', async () => {
+          if (!deferredPrompt) return;
+          deferredPrompt.prompt();
+          try { await deferredPrompt.userChoice; } catch (e) { /* choix annulé */ }
+          deferredPrompt = null;
+          btn.hidden = true;
+          btn.style.display = 'none';
+        });
+        // App déjà installée : ne jamais montrer le bouton.
+        window.addEventListener('appinstalled', () => {
+          btn.hidden = true;
+          btn.style.display = 'none';
+        });
+      })();
+    </script>
+  </body>
+</html>

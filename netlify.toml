@@ -1,0 +1,31 @@
+# Déploiement MATHIC — PWA installable (HTTPS natif chez Netlify)
+
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+# COOP/COEP : SharedArrayBuffer pour wllama (modèle IA local).
+# Netlify sert les fichiers statiques avec support Range natif (GGUF).
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Embedder-Policy = "require-corp"
+
+# Modèle IA : cache immuable (84 Mo, ne change pas à chaque déploiement)
+[[headers]]
+  for = "/models/*.gguf"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Service worker : jamais mis en cache (doit être revalidé à chaque visite)
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# Manifeste : revalidation rapide
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

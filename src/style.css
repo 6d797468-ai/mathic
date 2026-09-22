@@ -1,0 +1,695 @@
+/* ============================================================
+   MATHIC — style.css
+   Design minimaliste, contrastes élevés, mobile-first.
+   Grille de cases fixes + couche de tuiles absolues animées.
+   ============================================================ */
+
+:root {
+  --bg: #12141c;
+  --board-bg: #1e2130;
+  --cell-bg: #2a2e42;
+  --text: #e8eaf2;
+  --text-dim: #8a90a8;
+  --accent: #4fd1c5;
+  --radius: 10px;
+  --gap: 8px; /* espace entre cases — utilisé par le positionnement des tuiles */
+
+  /* Palette par magnitude de valeur (plages log2) */
+  --mag-1: #3d4460;
+  --mag-2: #4a6fa5;
+  --mag-3: #4fb286;
+  --mag-4: #e8b04b;
+  --mag-5: #e8704b;
+  --mag-6: #c94f8a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+/* --- En-tête / HUD ------------------------------------------- */
+
+header {
+  width: min(92vw, 460px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+h1 {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin: 0;
+  color: var(--accent);
+}
+
+#hud {
+  display: flex;
+  gap: 8px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--board-bg);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  min-width: 64px;
+}
+
+.stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+
+.stat span:last-child,
+.stat select {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.stat select {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.stat select option {
+  background: var(--board-bg);
+  color: var(--text);
+}
+
+.stat.target-stat {
+  border: 2px solid var(--accent);
+}
+
+.stat.target-stat span:last-child {
+  color: var(--accent);
+}
+
+/* Bump du score quand il augmente */
+#score.bump {
+  animation: bump 0.35s ease-out;
+}
+
+@keyframes bump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.45); color: var(--accent); }
+  100% { transform: scale(1); }
+}
+
+/* --- Barre d'opérateurs persistante (bas d'écran) ------------------- */
+
+#operator-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: min(92vw, 460px);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(30, 33, 48, 0.92);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid #343a52;
+  border-radius: 16px 16px 0 0;
+  z-index: 8;
+}
+
+.op-btn {
+  flex: 1;
+  min-width: 56px;
+  min-height: 56px;
+  max-width: 96px;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-dim);
+  background: var(--board-bg);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Fond plein, bordure et halo néon : l'état actif saute aux yeux */
+  transition: transform 0.12s ease, border-color 0.2s ease,
+    background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.op-btn:active {
+  transform: scale(0.94);
+}
+
+/* Couleur d'accent par opérateur sélectionné : fond contrasté + halo */
+.op-btn[data-op='add'].active { background: #4fd1c5; color: #0b1f18; border-color: #9bf0e7; box-shadow: 0 0 18px rgba(79, 209, 197, 0.55); }
+.op-btn[data-op='sub'].active { background: #e8704b; color: #2b0d04; border-color: #ffb399; box-shadow: 0 0 18px rgba(232, 112, 75, 0.55); }
+.op-btn[data-op='mul'].active { background: #e8b04b; color: #241a04; border-color: #ffd996; box-shadow: 0 0 18px rgba(232, 176, 75, 0.55); }
+.op-btn[data-op='div'].active { background: #4a90d9; color: #0a1a2b; border-color: #9cc6f0; box-shadow: 0 0 18px rgba(74, 144, 217, 0.55); }
+
+/* Boutons secondaires (indice, undo, puzzle, profiler) */
+#btn-hint,
+#btn-undo,
+#btn-puzzle,
+#btn-profile {
+  min-height: 48px;
+  padding: 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--board-bg);
+  border: 1px solid #343a52;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform 0.1s ease, background-color 0.15s ease;
+}
+
+#btn-undo {
+  display: none; /* visible uniquement en mode puzzle */
+}
+
+body[data-mode='puzzle'] #btn-undo {
+  display: inline-flex;
+}
+
+#btn-hint:active,
+#btn-undo:active,
+#btn-puzzle:active,
+#btn-profile:active {
+  transform: scale(0.94);
+}
+
+#btn-hint:hover,
+#btn-undo:hover,
+#btn-puzzle:hover,
+#btn-profile:hover {
+  background: #2e3350;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: min(92vw, 460px);
+  margin-top: 14px;
+}
+
+/* Jauge de coups restants (mode Coup Parfait) */
+.gauge-stat {
+  border: 2px solid #e8704b;
+}
+
+.gauge-stat span:last-child {
+  color: #e8704b;
+}
+
+.gauge-stat.urgent {
+  animation: gauge-urgent 0.8s ease-in-out infinite;
+}
+
+@keyframes gauge-urgent {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(232, 112, 75, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(232, 112, 75, 0.15); }
+}
+
+/* --- Grille -------------------------------------------------- */
+
+#board-wrap {
+  position: relative;
+  width: min(92vw, 460px);
+}
+
+#grid {
+  width: 100%; /* le wrapper contrôle la largeur */
+  position: relative; /* référence pour la couche de tuiles */
+  width: min(92vw, 460px);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), 1fr);
+  grid-template-rows: repeat(var(--rows, 4), 1fr);
+  gap: var(--gap);
+  padding: var(--gap);
+  background: var(--board-bg);
+  border-radius: var(--radius);
+  touch-action: none;
+}
+
+.cell {
+  background: var(--cell-bg);
+  border-radius: var(--radius);
+}
+
+/* --- Couche de tuiles animées ---------------------------------- */
+
+.tile-layer {
+  position: absolute;
+  inset: var(--gap);
+  pointer-events: none;
+}
+
+.tile {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(20px, 6vw, 34px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  border-radius: var(--radius);
+  /* Le glissement fluide : transition sur left/top */
+  transition: left 0.15s ease-in-out, top 0.15s ease-in-out;
+  will-change: left, top;
+}
+
+/* Palette par magnitude (mêmes couleurs que les cases d'origine) */
+.tile.mag-1 { background: var(--mag-1); color: #cfd6e4; }
+.tile.mag-2 { background: var(--mag-2); color: #ffffff; }
+.tile.mag-3 { background: var(--mag-3); color: #0b1f18; }
+.tile.mag-4 { background: var(--mag-4); color: #241a04; }
+.tile.mag-5 { background: var(--mag-5); color: #2b0d04; }
+.tile.mag-6 { background: var(--mag-6); color: #2b0416; }
+
+/* Halo des tuiles valant l'objectif courant */
+.tile.is-target {
+  box-shadow: 0 0 0 3px var(--accent), 0 0 14px rgba(79, 209, 197, 0.55);
+  animation: target-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes target-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--accent), 0 0 10px rgba(79, 209, 197, 0.4); }
+  50% { box-shadow: 0 0 0 3px var(--accent), 0 0 20px rgba(79, 209, 197, 0.75); }
+}
+
+/* Flash d'indice */
+.tile.hinted {
+  animation: hint-flash 0.45s ease-in-out 4;
+}
+
+@keyframes hint-flash {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.9); }
+}
+
+/* --- Animations des tuiles -------------------------------------- */
+
+@keyframes spawn-pop {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes merge-bounce {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-3px); }
+}
+
+@keyframes boom {
+  0% { transform: scale(1); filter: brightness(1); }
+  35% { transform: scale(1.3); filter: brightness(2.4); }
+  100% { transform: scale(0.1); opacity: 0; }
+}
+
+.tile.spawn { animation: spawn-pop 0.18s ease-out; }
+.tile.merge { animation: merge-bounce 0.2s ease-out; }
+.tile.shake { animation: shake 0.3s ease-in-out; }
+.tile.exploding { animation: boom 0.32s ease-in forwards; }
+
+/* Popup de points flottant */
+.float-text {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(16px, 4.5vw, 24px);
+  font-weight: 800;
+  color: var(--accent);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  animation: float-up 0.9s ease-out forwards;
+}
+
+@keyframes float-up {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-46px); opacity: 0; }
+}
+
+/* --- Phase 4 : particules, halo, screen shake -------------------- */
+
+/* Éclats projetés à l'explosion d'une tuile-cible */
+.particle {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  animation: particle-fly 0.65s ease-out forwards;
+}
+
+@keyframes particle-fly {
+  0% {
+    transform: translate(0, 0) scale(var(--ps, 1));
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--px, 0), var(--py, 0)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+/* Halo expansif au point d'explosion (doré si combo) */
+.halo {
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  transform: translate(0, 0) scale(0.4);
+  opacity: 0.9;
+  pointer-events: none;
+  animation: halo-expand 0.6s ease-out forwards;
+}
+
+.halo-combo {
+  border-color: #ffd166;
+  border-width: 4px;
+  box-shadow: 0 0 24px rgba(255, 209, 102, 0.65);
+}
+
+@keyframes halo-expand {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+/* Badge Mathic Chain : multiplicateur visible (roadmap 4.x) */
+#chain-badge {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.6);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  background: rgba(18, 20, 28, 0.92);
+  border: 2px solid #ffd166;
+  border-radius: 999px;
+  color: #ffd166;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  box-shadow: 0 0 18px rgba(255, 209, 102, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  z-index: 5;
+}
+
+#chain-badge.visible {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+#chain-badge.pop {
+  animation: chain-pop 0.3s ease-out;
+}
+
+@keyframes chain-pop {
+  0% { transform: translateX(-50%) scale(1); }
+  45% { transform: translateX(-50%) scale(1.35); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+#chain-badge.combo {
+  animation: chain-combo-flash 0.45s ease-out;
+}
+
+@keyframes chain-combo-flash {
+  0% { box-shadow: 0 0 18px rgba(255, 209, 102, 0.45); }
+  50% { box-shadow: 0 0 42px rgba(255, 209, 102, 0.95); }
+  100% { box-shadow: 0 0 18px rgba(255, 209, 102, 0.45); }
+}
+
+/* Points de fenêtre : coups restants pour prolonger la chaîne */
+#chain-window i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffd166;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+#chain-window i.spent {
+  opacity: 0.15;
+}
+
+/* HUD de profilage (touche P) — roadmap 5.2 */
+#profiler {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 50;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(10, 12, 18, 0.88);
+  border: 1px solid #343a52;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+#profiler.on {
+  display: flex;
+}
+
+#profiler .p-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#profiler .p-big {
+  align-items: baseline;
+}
+
+#profiler .p-big span {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+#profiler b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+#profiler #p-fps.good { color: #4fb286; }
+#profiler #p-fps.mid { color: #e8b04b; }
+#profiler #p-fps.bad { color: #e8704b; }
+
+/* Screen shake : secousse du plateau (contact invalide) */
+@keyframes screen-shake-kf {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-6px, 2px); }
+  40% { transform: translate(5px, -3px); }
+  60% { transform: translate(-4px, -2px); }
+  80% { transform: translate(3px, 2px); }
+}
+
+@keyframes screen-shake-strong-kf {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  15% { transform: translate(-10px, 3px) rotate(-0.7deg); }
+  35% { transform: translate(9px, -4px) rotate(0.6deg); }
+  55% { transform: translate(-7px, -3px) rotate(-0.4deg); }
+  75% { transform: translate(5px, 3px) rotate(0.3deg); }
+}
+
+#grid.screen-shake {
+  animation: screen-shake-kf 0.32s ease-in-out;
+}
+
+#grid.screen-shake-strong {
+  animation: screen-shake-strong-kf 0.45s ease-in-out;
+}
+
+/* --- Panneau du coach IA ---------------------------------------- */
+
+#coach {
+  width: min(92vw, 460px);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  background: var(--board-bg);
+  border: 1px solid #343a52;
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+#coach-avatar {
+  font-size: 26px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+#coach-body {
+  flex: 1;
+  min-width: 0;
+}
+
+#coach-status {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 3px;
+}
+
+#coach-text {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+  min-height: 20px;
+}
+
+#coach-text.coach-say {
+  animation: coach-pop 0.3s ease-out;
+}
+
+@keyframes coach-pop {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Bouton -------------------------------------------------- */
+
+#new-game {
+  padding: 12px 28px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.15s ease;
+}
+
+#new-game:active {
+  transform: scale(0.96);
+  filter: brightness(1.1);
+}
+
+/* --- Overlay fin de partie ------------------------------------ */
+
+#game-over-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 18, 0.82);
+  backdrop-filter: blur(4px);
+  z-index: 10;
+  padding: 16px;
+}
+
+#game-over-overlay.visible {
+  display: flex;
+}
+
+.overlay-card {
+  background: var(--board-bg);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  text-align: center;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.overlay-card h2 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  color: var(--accent);
+}
+
+.overlay-card p {
+  margin: 0 0 18px;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.overlay-stats {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+#restart {
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+#restart:active {
+  transform: scale(0.96);
+}
