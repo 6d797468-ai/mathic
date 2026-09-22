@@ -107,6 +107,7 @@ const targetElement = document.querySelector('#target');
 const newGameButton = document.querySelector('#new-game');
 const puzzleButton = document.querySelector('#btn-puzzle');
 const undoButton = document.querySelector('#btn-undo');
+const fullscreenButton = document.querySelector('#btn-fs');
 const movesLeftElement = document.querySelector('#moves-left');
 const sizeSelect = document.querySelector('#board-size-select');
 const hintButton = document.querySelector('#btn-hint');
@@ -720,6 +721,8 @@ window.addEventListener('keydown', (e) => {
     undoMove();
   } else if (e.key === 'p' || e.key === 'P') {
     profiler.toggle();
+  } else if (e.key === 'f' || e.key === 'F') {
+    toggleFullscreen();
   }
 });
 
@@ -727,6 +730,52 @@ window.addEventListener('keydown', (e) => {
 const profiler = createProfiler();
 if (profileButton) {
   profileButton.addEventListener('click', () => profiler.toggle());
+}
+
+// --- Édition plein-écran (Phase 4) ---------------------------------------------
+// Mode immersif : la grille remplît le viewport (CSS `body.fullscreen`).
+// L'API native Fullscreen (sur le document) est tentée quand elle existe ;
+// sinon le mode CSS pur s'applique (fallback iOS par exemple).
+function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen?.().catch(() => {});
+    return;
+  }
+  const canNative = typeof document.documentElement.requestFullscreen === 'function';
+  if (canNative) {
+    // Classe posée pour l'immersion pendant la transition native ; elle
+    // sera retirée à la sortie (ESC → fullscreenchange).
+    document.body.classList.add('fullscreen');
+    document.documentElement.requestFullscreen().catch(() => {
+      // API refusée (permissions) : on rend la main au mode normal.
+      document.body.classList.remove('fullscreen');
+      syncFullscreenUI();
+    });
+  } else {
+    // Fallback : mode immersif purement CSS, annulé par un nouveau clic.
+    document.body.classList.toggle('fullscreen');
+    syncFullscreenUI();
+  }
+}
+
+function syncFullscreenUI() {
+  if (!fullscreenButton) return;
+  const active =
+    document.body.classList.contains('fullscreen') || !!document.fullscreenElement;
+  fullscreenButton.setAttribute('aria-pressed', active ? 'true' : 'false');
+}
+
+function onFullscreenChange() {
+  if (!document.fullscreenElement) document.body.classList.remove('fullscreen');
+  syncFullscreenUI();
+}
+
+document.addEventListener('fullscreenchange', onFullscreenChange);
+// Variante préfixée (anciens WebKit).
+document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
+if (fullscreenButton) {
+  fullscreenButton.addEventListener('click', toggleFullscreen);
 }
 
 // --- Démarrage -----------------------------------------------------------------------

@@ -21,6 +21,12 @@
   --mag-4: #e8b04b;
   --mag-5: #e8704b;
   --mag-6: #c94f8a;
+
+  /* Taille fluide du plateau (édition plein-écran, Phase 4).
+     Portraits : borné par la largeur (92vw), comme avant.
+     Desktop / paysage : la grille S'AGRANDIT avec la hauteur disponible
+     (100svh) au lieu d'être plafonnée à 460px — jamais moins de 300px. */
+  --board-max: max(300px, min(92vw, calc(100svh - 200px), 680px));
 }
 
 * {
@@ -46,7 +52,7 @@ body {
 /* --- En-tête / HUD ------------------------------------------- */
 
 header {
-  width: min(92vw, 460px);
+  width: var(--board-max);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -130,7 +136,7 @@ h1 {
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
-  width: min(92vw, 460px);
+  width: var(--board-max);
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -178,7 +184,8 @@ h1 {
 #btn-hint,
 #btn-undo,
 #btn-puzzle,
-#btn-profile {
+#btn-profile,
+#btn-fs {
   min-height: 48px;
   padding: 0 16px;
   font-size: 18px;
@@ -202,15 +209,77 @@ body[data-mode='puzzle'] #btn-undo {
 #btn-hint:active,
 #btn-undo:active,
 #btn-puzzle:active,
-#btn-profile:active {
+#btn-profile:active,
+#btn-fs:active {
   transform: scale(0.94);
 }
 
 #btn-hint:hover,
 #btn-undo:hover,
 #btn-puzzle:hover,
-#btn-profile:hover {
+#btn-profile:hover,
+#btn-fs:hover {
   background: #2e3350;
+}
+
+/* Bouton plein écran : l'état actif est signalé (accent) */
+#btn-fs[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+/* --- Édition plein-écran (Phase 4) --------------------------------
+   Mode immersif : le plateau remplit le viewport. La classe
+   `body.fullscreen` est posée par JS (bouton ⛶ / touche F), en miroir
+   de l'état natif du Fullscreen API (via fullscreenchange). */
+
+body.fullscreen {
+  /* Taille = hauteur restante : HUD flottant (~48px) + barre d'opérateurs
+     (~76px) réservés, jamais de scroll (overflow hidden ci-dessous).
+     En paysage très court, le plancher 300px garde la grille jouable. */
+  --board-max: max(300px, min(94vw, calc(100svh - 140px), 980px));
+  overflow: hidden; /* aucune navigation parasite pendant le jeu */
+  /* La taille du plateau réserve déjà tout le vertical : on neutralise
+     les paddings de base (la grille 94vw garde ~3% de marges latérales). */
+  padding: 0 0 calc(76px + env(safe-area-inset-bottom)) 0;
+}
+
+body.fullscreen h1 {
+  display: none; /* le HUD compact suffit */
+}
+
+body.fullscreen header {
+  position: fixed;
+  top: calc(6px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(30, 33, 48, 0.82);
+  backdrop-filter: blur(8px);
+  border: 1px solid #343a52;
+  border-radius: 999px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  z-index: 9;
+}
+
+body.fullscreen #hud {
+  gap: 6px;
+}
+
+body.fullscreen #board-wrap {
+  margin-top: 56px; /* dégage le HUD flottant */
+}
+
+body.fullscreen #coach,
+body.fullscreen .action-row {
+  display: none;
+}
+
+body.fullscreen #operator-bar {
+  width: var(--board-max);
 }
 
 .action-row {
@@ -218,7 +287,7 @@ body[data-mode='puzzle'] #btn-undo {
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
-  width: min(92vw, 460px);
+  width: var(--board-max);
   margin-top: 14px;
 }
 
@@ -244,13 +313,12 @@ body[data-mode='puzzle'] #btn-undo {
 
 #board-wrap {
   position: relative;
-  width: min(92vw, 460px);
+  width: var(--board-max);
 }
 
 #grid {
   width: 100%; /* le wrapper contrôle la largeur */
   position: relative; /* référence pour la couche de tuiles */
-  width: min(92vw, 460px);
   aspect-ratio: 1;
   display: grid;
   grid-template-columns: repeat(var(--cols, 4), 1fr);
@@ -280,7 +348,8 @@ body[data-mode='puzzle'] #btn-undo {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(20px, 6vw, 34px);
+  /* Taille fluide : proportionnelle au plateau (édition plein-écran) */
+  font-size: calc(var(--board-max) * 0.07);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   user-select: none;
@@ -362,7 +431,7 @@ body[data-mode='puzzle'] #btn-undo {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(16px, 4.5vw, 24px);
+  font-size: clamp(15px, calc(var(--board-max) * 0.035), 30px);
   font-weight: 800;
   color: var(--accent);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
@@ -567,7 +636,7 @@ body[data-mode='puzzle'] #btn-undo {
 /* --- Panneau du coach IA ---------------------------------------- */
 
 #coach {
-  width: min(92vw, 460px);
+  width: var(--board-max);
   display: flex;
   align-items: flex-start;
   gap: 10px;
