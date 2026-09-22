@@ -1,0 +1,252 @@
+{
+  "$comment": "MATHIC V3 — Baseline forensic (Gate G0). Fichier généré par l'équipe Kali depuis des mesures locales, sur la branche kali/g0. Décrit l'état, ne le corrige pas.",
+  "baseline": {
+    "commit": "09a45a38f0fd963494d09ca65de5d6c161022285",
+    "tag": "v3.0-baseline",
+    "branch": "main",
+    "repo": "6d797468-ai/mathic",
+    "measuredAt": "2026-09-22T17:16:59.859Z"
+  },
+  "generator": {
+    "name": "scripts/generate-baseline.mjs",
+    "team": "kali",
+    "reproducible": true
+  },
+  "versions": {
+    "node": "v24.19.0",
+    "npm": "11.19.0",
+    "vite": "^8.3.0",
+    "capacitor": "^8.5.2",
+    "wllama": "^3.6.1",
+    "packageJsonVersion": "0.0.0",
+    "packageJsonVersionNote": "version 3.0.0 volontairement NON ajoutée : modification de package.json interdite par le périmètre G0 (prévue par le plan en G0, mais gelée pour ce lot forensic)."
+  },
+  "artifacts": {
+    "gguf": {
+      "path": "public/models/smollm-135m-math-v7-q2_k.gguf",
+      "sizeBytes": 88201568,
+      "sha256": "be35b98191277902ff8188e61666be5c661bdc83ce1e560ebc58280902e5b91d"
+    },
+    "wllamaWasm": {
+      "path": "public/wllama/wllama.wasm",
+      "sizeBytes": 8457512,
+      "sha256": "6ca9fdd1b6c03206cd3a04e359b52c8f539896d6c5fb5d36243dded4a689f0ad"
+    }
+  },
+  "serviceWorker": {
+    "file": "public/sw.js",
+    "versionHardcoded": "mathic-v2",
+    "line": 13,
+    "status": "DEBT_P0"
+  },
+  "sourceInventory": {
+    "modules": [
+      {
+        "path": "src/board.js",
+        "lines": 518,
+        "role": "logique pure + solveur BFS (minMovesToReach:492)",
+        "debtRefs": [
+          "D1"
+        ]
+      },
+      {
+        "path": "src/puzzle.js",
+        "lines": 204,
+        "role": "rétro-génération BFS + validateur",
+        "debtRefs": [
+          "D2"
+        ]
+      },
+      {
+        "path": "src/diff.js",
+        "role": "différentiel de tuiles pur",
+        "debtRefs": []
+      },
+      {
+        "path": "src/history.js",
+        "role": "pile Undo immuable (Calvados)",
+        "debtRefs": []
+      },
+      {
+        "path": "src/targets.js",
+        "role": "sélection de cibles",
+        "debtRefs": [
+          "D4"
+        ]
+      },
+      {
+        "path": "src/ai.js",
+        "role": "coach Momo (wllama + fallback)",
+        "debtRefs": [
+          "D4"
+        ]
+      },
+      {
+        "path": "src/audio.js",
+        "role": "moteur audio synthèse Web Audio",
+        "debtRefs": []
+      },
+      {
+        "path": "src/ui.js",
+        "role": "rendu/animation DOM",
+        "debtRefs": [
+          "D4"
+        ]
+      },
+      {
+        "path": "src/input.js",
+        "role": "entrées tactiles/clavier",
+        "debtRefs": []
+      },
+      {
+        "path": "src/tutorial.js",
+        "role": "FTUE scripté",
+        "debtRefs": []
+      },
+      {
+        "path": "src/profiler.js",
+        "role": "mesures perfs",
+        "debtRefs": []
+      },
+      {
+        "path": "src/main.js",
+        "lines": 1109,
+        "role": "orchestration (God Object)",
+        "debtRefs": [
+          "D3",
+          "D5",
+          "D6",
+          "D7"
+        ]
+      }
+    ],
+    "lineCountsNote": "Les valeurs lines sont informatives (mesures du jour) ; seule la liste des modules fait foi."
+  },
+  "debts": [
+    {
+      "id": "D1",
+      "severity": "P0",
+      "title": "Math.random() dans le Game Core (spawn de tuiles)",
+      "verifiedLocations": [
+        "src/board.js:93",
+        "src/board.js:94"
+      ],
+      "plannedFixGate": "G2"
+    },
+    {
+      "id": "D2",
+      "severity": "P0",
+      "title": "Math.random() dans le générateur de puzzles",
+      "verifiedLocations": [
+        "src/puzzle.js:34",
+        "src/puzzle.js:141"
+      ],
+      "plannedFixGate": "G2"
+    },
+    {
+      "id": "D3",
+      "severity": "P0",
+      "title": "Math.random() dans reactToMove ( narration/cosmétique UI )",
+      "verifiedLocations": [
+        "src/main.js:357",
+        "src/main.js:369",
+        "src/main.js:374",
+        "src/main.js:379",
+        "src/main.js:385"
+      ],
+      "plannedFixGate": "G2 (déplacé hors du Core)"
+    },
+    {
+      "id": "D4",
+      "severity": "P1",
+      "title": "Math.random() dans modules non-core (sélection de répliques, particules cosmétiques)",
+      "verifiedLocations": [
+        "src/ai.js:342",
+        "src/ai.js:345",
+        "src/ai.js:367",
+        "src/ui.js:252-256",
+        "src/ui.js:391-392",
+        "src/targets.js:251",
+        "src/targets.js:260"
+      ],
+      "plannedFixGate": "G2+ (flux cosmetic dédié)"
+    },
+    {
+      "id": "D5",
+      "severity": "P0",
+      "title": "Service Worker versionné en dur (mathic-v2)",
+      "verifiedLocations": [
+        "public/sw.js:13"
+      ],
+      "plannedFixGate": "G0.5 (via génération dist/sw.js, pas via vite define)"
+    },
+    {
+      "id": "D6",
+      "severity": "P1",
+      "title": "localStorage pour profil/score/progression",
+      "verifiedLocations": [
+        "src/main.js:152-161 (migrations legacy 'mather-best' → 'mathic_record')"
+      ],
+      "plannedFixGate": "G7 (IndexedDB + migration)"
+    },
+    {
+      "id": "D11",
+      "severity": "P1",
+      "title": "God Object main.js",
+      "verifiedLocations": [
+        "src/main.js (1109 lignes)"
+      ],
+      "plannedFixGate": "G1..G8 progressif"
+    },
+    {
+      "id": "D7",
+      "severity": "P1",
+      "title": "BFS minMovesToReach sur le thread UI",
+      "verifiedLocations": [
+        "src/board.js:481-518 (export :492)"
+      ],
+      "plannedFixGate": "G10 (Worker)"
+    },
+    {
+      "id": "D8",
+      "severity": "P1",
+      "title": "Niveaux hardcodés PUZZLE_LEVELS",
+      "verifiedLocations": [
+        "src/main.js:550 (const), :565 (usage)"
+      ],
+      "plannedFixGate": "G3"
+    },
+    {
+      "id": "D9",
+      "severity": "P0",
+      "title": "Momo lit les variables internes de main.js (couplage direct)",
+      "verifiedLocations": [
+        "src/main.js:347-388 (coachReact recevra un objet assemblé main.js)"
+      ],
+      "plannedFixGate": "G8 (Momo Adapter, lecture seule, jamais authority)"
+    },
+    {
+      "id": "D10",
+      "severity": "P0",
+      "title": "Pas de PRNG déterministe (prérequis replay)",
+      "verifiedLocations": [
+        "grep Math.random src/ : 20 occurrences dans 6 fichiers"
+      ],
+      "plannedFixGate": "G2"
+    }
+  ],
+  "testsAtBaseline": {
+    "unitLogic": "3/3 pass (node --test)",
+    "playtestPerfectPlayer": "50/50 puzzles retrouvés, 50/50 victoires au coup exact",
+    "playtestFaultyPlayer": "49/50 blocages détectés, 0 faux positif, 50/50 undo restaure",
+    "build": "vite 8.3.0 OK — 34 modules, 362.90 kB (gzip 159.75 kB)",
+    "npmAuditProd": "0 vulnérabilités"
+  },
+  "remoteState": {
+    "branches": [
+      "main"
+    ],
+    "mainHead": "09a45a38f0fd963494d09ca65de5d6c161022285",
+    "lkaddafiG1G3": "NON INTÉGRÉS — push NOT PROVEN au 2026-09-22 17:05 UTC"
+  }
+}
