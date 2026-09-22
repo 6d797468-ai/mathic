@@ -1,0 +1,91 @@
+{
+  "probe": "tests/runtime/g05-probe.mjs",
+  "team": "kali",
+  "gate": "G0.5-runtime (dérogation D8 : baseline 09a45a3, G0 merge non encore intégré)",
+  "baseline": "09a45a38f0fd963494d09ca65de5d6c161022285",
+  "branch": "kali/g0.5-runtime",
+  "measuredAt": "2026-09-22T18:18:51.944Z",
+  "durationMs": 5782,
+  "buildMs": 3956,
+  "counts": {
+    "pass": 11,
+    "fail": 0,
+    "notTestable": 0
+  },
+  "results": [
+    {
+      "domain": "BUILD",
+      "check": "vite build",
+      "status": "PASS",
+      "detail": "OK en 3956 ms · bundle assets/index-BDNiOvS0.js (354.4 kB)"
+    },
+    {
+      "domain": "SERVER",
+      "check": "certificats locaux",
+      "status": "PASS",
+      "detail": "certs/ présents (jamais commités)"
+    },
+    {
+      "domain": "SERVER",
+      "check": "HTTPS origin :8443",
+      "status": "PASS",
+      "detail": "index.html 200 via TLS auto-signé"
+    },
+    {
+      "domain": "RANGE-A",
+      "check": "premier chunk",
+      "status": "PASS",
+      "detail": "206 · 524288 o · Content-Range: bytes 0-524287/88201568 · SHA256 contenu ✓"
+    },
+    {
+      "domain": "RANGE-A",
+      "check": "chunk médian",
+      "status": "PASS",
+      "detail": "206 · 524288 o · Content-Range: bytes 524288-1048575/88201568 · SHA256 contenu ✓"
+    },
+    {
+      "domain": "RANGE-A",
+      "check": "overlap (0-1048575)",
+      "status": "PASS",
+      "detail": "206 · 1048576 o · Content-Range: bytes 0-1048575/88201568 · SHA256 contenu ✓"
+    },
+    {
+      "domain": "RANGE-A",
+      "check": "au-delà de la fin",
+      "status": "PASS",
+      "detail": "statut 416 (comportement serveur documenté, pas de corruption)"
+    },
+    {
+      "domain": "GAME",
+      "check": "createBoard + fillInitialTiles",
+      "status": "PASS",
+      "detail": "8 tuiles, valeurs entières ≥1 : true"
+    },
+    {
+      "domain": "GAME",
+      "check": "1000 coups slideBoard",
+      "status": "PASS",
+      "detail": "exécutés en 55 ms (~0.055 ms/coup)"
+    },
+    {
+      "domain": "PERF-BFS",
+      "check": "minMovesToReach (UI thread)",
+      "status": "PASS",
+      "detail": "BFS depth 4 exécuté — mesure dédiée en section 5"
+    },
+    {
+      "domain": "PERF-BFS",
+      "check": "5 exécutions depth 4",
+      "status": "PASS",
+      "detail": "min 6.1 ms · moy 19.7 ms · max 43.2 ms (Node v24.19.0) — coût UI thread documenté"
+    }
+  ],
+  "notTestableHere": [
+    "SW actif / caches (navigateur requis — aucun Chrome sur kali)",
+    "Offline reload PWA (navigateur requis)",
+    "Range via Service Worker — couche B (navigateur requis)",
+    "Rendu / interactions / erreurs console (navigateur requis)",
+    "Android WebView + APK install (SDK Android absent → NOT TESTABLE HERE)",
+    "Worker solver runtime réel (worker navigateur — Node worker_threads incompatible)"
+  ]
+}
