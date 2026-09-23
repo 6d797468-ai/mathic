@@ -1,34 +1,31 @@
 /**
  * main.js — Boucle de jeu, chorégraphie et orchestration du coach IA
  *
+ * K5 : la MÉCANIQUE appartient à l'adapter (src/game.js → GameSession →
+ * Core → GameEvents) ; ce module orchestre UNIQUEMENT la présentation.
  * Chorégraphie d'un coup :
- *  1. slideBoard        → modèle mis à jour + trajectoires (moves)
- *  2. tiles.slide       → les tuiles glissent, les fusions convergent
- *  3. tiles.shake       → feedback des contacts invalides
- *  4. processTargets    → explosion des tuiles-objectif (cible fixe 24),
- *                         bonus massif (V3 Effondrement)
- *  5. spawn + tiles.sync → nouvelle tuile (pop), surbrillance, HUD
- *  6. game over check
+ *  1. game.move(dir, op) → moteur (court) + outcome (trajectoires, faits)
+ *  2. tiles.slide         → les tuiles glissent, les fusions convergent
+ *  3. tiles.shake         → feedback des contacts invalides
+ *  4. tiles.explode       → effondrement des tuiles-objectif (bonus classic
+ *                           lu sur clone : 500 + 100/tuile), ou le moteur
+ *                           pour le puzzle
+ *  5. tiles.sync          → le spawn vient du moteur, surbrillance, HUD
+ *  6. afterPuzzleMove / gameOver → fin de partie
  *
  * Momo (coach IA local) commente CHAQUE coup : fusions, coups faibles,
  * coups sans effet, contacts invalides, explosions, et annonce chaque
  * nouvel objectif avec son atteignabilité réelle (faits calculés par le code).
+ * Le TUTORIEL (séquence scriptée FTUE) est le seul bloc qui écrit ses
+ * miroirs d'affichage en direct (chorégraphie isolée, pas la boucle de jeu).
  */
 
 import './style.css';
 import {
   createBoard,
   slideBoard,
-  spawnRandomTile,
-  fillInitialTiles,
-  isGameOver,
-  isCleaningMove,
-  countEmptyCells,
-  minMovesToReach,
-  createChainTracker,
 } from './core/board.js';
-import { OPERATORS, TARGET_NUMBER } from './core/rules.js';
-import { createRng, createRngStreams } from './random.js';
+import { createRng } from './random.js';
 import {
   buildGrid,
   createTileManager,
@@ -43,7 +40,7 @@ import {
   findTargetHint,
   describeTarget,
 } from './targets.js';
-import { generatePuzzle, PUZZLE_STARTER_MAX } from './puzzle.js';
+import { createGame, CLASSIC_BONUS, CLASSIC_HIT_BONUS } from './game.js';
 import {
   initAI,
   aiIsReady,
@@ -58,12 +55,6 @@ import {
 } from './ai.js';
 import { createProfiler } from './profiler.js';
 import { createAudioManager } from './audio.js';
-import {
-  createCalvados,
-  makeEntry,
-  reversePlan,
-  calvadosContext,
-} from './history.js';
 import {
   createTutorial,
   isTutorialDone,
@@ -82,47 +73,57 @@ const OP_SYMBOLS = { add: '+', sub: '−', mul: '×', div: '÷' };
 
 let rows = 4;
 let cols = 4;
-let board = createBoard(rows, cols);
 let currentOp = 'add';
 let busy = false;
-let score = 0;
 let best = Number(migrateOldKeys() || 0);
-let target = 0;
-let targetCount = 0;
 let idleTimer = null;
 let hintLock = false;
 /** @type {ReturnType<typeof createTileManager>|null} */
 let tiles = null;
 
-// --- RNG (G2) : flux déterministes, un par préoccupation --------------------
-/** Seed de la session courante (pour replay / debug). */
-let sessionSeed = String(Date.now());
-/** Flux game : spawn, coups, génération puzzle. */
-let gameRng = createRng(sessionSeed);
-/** Flux cosmetic : animations, réactions Momo, feedback visuel. */
-let cosmeticRng = createRng(sessionSeed ^ 0xDEADBEEF);
-/** Flux puzzle : génération rétro-ingénierie. */
-let puzzleRng = createRng(sessionSeed ^ 0xCAFEBABE);
+// K5 : l'ADAPTER est l'autorité unique (moteur audité). Les variables
+// d'état ci-dessous ne sont que des MIROIRS D'AFFICHAGE : lues par l'UI
+// (HUD, tuiles, coach), réécrites par l'adapter à chaque coup/undo/nouvelle
+// partie. Seul le tutoriel (séquence scriptée isolée) les écrit en direct.
+const game = createGame();
+let board = [];
+let score = 0;
+let target = 0;
+let targetCount = 0;
+let movesLeft = 0;
+let puzzleMoves = 0;
 
-// Mode courant : 'classic' (score libre) ou 'puzzle' (Coup Parfait).
+// Seed de session (miroir, pour le debug / replay).
+let sessionSeed = String(Date.now());
+// Flux cosmetic (coach) : seul consommateur RESTANT du RNG côté runtime ;
+// le flux game (spawn/coups) appartient désormais au moteur (game stream).
+let cosmeticRng = createRng(sessionSeed ^ 0xDEADBEEF);
+
+// Mode courant : 'tutorial' ou 'classic'/'puzzle' (géré par l'adapter).
 let mode = 'classic';
-let movesLeft = 0; // jauge de coups restants (mode puzzle)
-let puzzleMoves = 0; // profondeur N certifiée du puzzle courant
-/** Pile Calvados : historique COMPLET des coups (états ± faits exacts). */
-const calvados = createCalvados();
 /** Hôte visuel du tutoriel FTUE (null hors tutoriel). */
 let tutorialHost = null;
-
-// Mathic Chain (Phase 4) : chaîne d'objectifs en < 2 coups.
-const chainTracker = createChainTracker();
-let moveIndex = 0; // compteur de coups joués (pour la chaîne)
-/** Fenêtre de chaîne ACTIVE : coups restants avant extinction (0 = off). */
-let chainWindowLeft = 0;
-let chainCount = 0;
 
 // Résonance V2 : nombre de coups RÉUSSIS (avec fusion) d'affilée — le pitch
 // des fusions monte d'un demi-ton à chaque pas (ascension harmonique).
 let mergeStreak = 0;
+
+/** Met à jour les miroirs d'affichage depuis l'adapter. */
+function syncMirror() {
+  board = game.board;
+  score = game.score;
+  target = game.target;
+  targetCount = game.targetCount;
+  movesLeft = game.movesLeft;
+  puzzleMoves = game.puzzleMoves;
+  sessionSeed = game.seed;
+}
+
+/** Rafraîchit le badge CHAIN depuis l'adapter (fenêtre 2 coups). */
+function refreshChainBadge() {
+  if (game.chainWindowLeft > 0) showChain(game.chainCount, game.chainWindowLeft);
+  else hideChain();
+}
 
 // --- Moteur audio + éléments DOM -------------------------------------------
 
@@ -178,8 +179,10 @@ function migrateOldKeys() {
   return localStorage.getItem('mathic_record') || 0;
 }
 
-const TARGET_BONUS = 500; // V3 : bonus massif par tuile effondrée (= 24)
-const HIT_BONUS = 100; // points par tuile-cible supplémentaire (multi-explosion)
+// Bonus d'effondrement classic (V3, cible 24) : propriété de l'adapter
+// (testable), ré-exportés ici pour le tutoriel scripté.
+const TARGET_BONUS = CLASSIC_BONUS;
+const HIT_BONUS = CLASSIC_HIT_BONUS;
 
 // --- Coach : affichage --------------------------------------------------------
 
@@ -271,35 +274,23 @@ function announceTarget() {
 function newGame() {
   // G2 : nouvelle seed par session pour la déterminabilité.
   sessionSeed = `classic-${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
-  gameRng = createRng(sessionSeed);
   cosmeticRng = createRng(sessionSeed ^ 0xDEADBEEF);
-  puzzleRng = createRng(sessionSeed ^ 0xCAFEBABE);
 
   mode = 'classic';
   document.body.dataset.mode = 'classic';
-  board = createBoard(rows, cols);
-  score = 0;
   busy = false;
-  targetCount = 0;
-  calvados.clear();
-  chainTracker.reset();
-  moveIndex = 0;
-  chainWindowLeft = 0;
-  chainCount = 0;
   mergeStreak = 0;
-  hideChain();
+
+  // K5 : la mécanique (plateau initial, spawn [1..5], compteur, game over)
+  // appartient au moteur via l'adapter — 6 tuiles initiales (default moteur).
+  game.newClassic({ rows, cols, seed: sessionSeed });
+  syncMirror();
 
   buildGrid(gridElement, rows, cols);
   const tileLayer = gridElement.querySelector('.tile-layer');
   tiles = createTileManager(tileLayer, rows, cols);
 
-  // Équilibrage (roadmap 1.2) : tuiles initiales ET spawn dans [1..5].
-  // CONTRAT G2 : rng OBLIGATOIRE (pas de fallback Math.random).
-  fillInitialTiles(board, Math.max(4, cols), PUZZLE_STARTER_MAX, gameRng);
-  // V3 « Effondrement » : cible FIXE (24) — les tuiles qui l'atteignent
-  // explosent et libèrent la case. Le joueur jongle avec les 4 opérateurs.
-  target = TARGET_NUMBER;
-
+  hideChain();
   updateHud();
   tiles.sync(board, targetValueCells());
   hideGameOver();
@@ -332,22 +323,6 @@ function targetValueCells() {
     }
   }
   return indexes;
-}
-
-/**
- * Traite les explosions : consomme les tuiles égales à la cible, attribue
- * les bonus. En mode libre la cible est FIXE (TARGET_NUMBER) — elle ne
- * change jamais ; seul le mode puzzle impose une cible par coup.
- */
-function processTargets() {
-  const consumed = consumeTargetTiles(board, target);
-  if (consumed.length === 0) return { exploded: [], bonus: 0 };
-
-  const bonus = TARGET_BONUS + (consumed.length - 1) * HIT_BONUS;
-  score += bonus;
-  targetCount += consumed.length;
-
-  return { exploded: consumed, bonus };
 }
 
 /**
@@ -413,36 +388,26 @@ function handleDirection(dir) {
     return;
   }
 
-  const result = slideBoard(board, dir, currentOp);
-  if (!result.moved) {
+  // K5 : un seul point d'entrée — l'ADAPTER (mécanique moteur + spins).
+  const r = game.move(dir, currentOp);
+  if (!r.moved) {
     audio.playError(); // glissement sans effet → son « bloqué »
-    reactToMove(result, []);
+    reactToMove({ gained: 0, invalidCells: r.invalidCells || [] }, []);
     return;
   }
 
   busy = true;
   audio.playMove(); // « pop » tactile au départ du glissement
-  // Snapshot COMPLET avant le coup : l'Undo restaure exactement cet état
-  // (score, jauge, cible, chaîne, compteur de coups).
-  const snapBefore = { score, movesLeft, target, targetCount, moveIndex, chainWindowLeft, chainCount };
-  const beforeBoard = board; // avant le coup (mesure de l'espace libéré)
-  board = result.board;
-  score += result.gained;
-  if (mode === 'puzzle') movesLeft -= 1;
-  moveIndex += 1;
 
-  // Coup de nettoyage (Hype-Man) : sub/div qui libère une case sur un
-  // plateau encombré → Momo valorise la finesse tactique du joueur.
-  const cleaning = isCleaningMove(beforeBoard, result.board, currentOp)
-    ? {
-        op: currentOp,
-        freed: countEmptyCells(result.board) - countEmptyCells(beforeBoard),
-      }
-    : null;
+  // Miroirs d'affichage (le vrai état est côté moteur / adapter).
+  board = game.board;
+  score = r.score;
+  movesLeft = r.movesLeft;
+  targetCount = game.targetCount;
 
   // 1) Les tuiles glissent (et les fusions convergent) — la fusion éclate
   // en confettis teintés de l'opérateur (V2).
-  const mergeCount = result.mergedCells.length;
+  const mergeCount = r.mergedCells.length;
   if (mergeCount > 0) {
     // Résonance harmonique : +1 pas par coup réussi d'affilée (et +1 par
     // fusion supplémentaire dans le même coup).
@@ -451,7 +416,7 @@ function handleDirection(dir) {
   } else {
     mergeStreak = 0; // coup sans fusion → la série retombe
   }
-  tiles.slide(result.moves, result.mergedCells, {
+  tiles.slide(r.moves, r.mergedCells, {
     confettiColor: OP_COLORS[currentOp],
   });
 
@@ -459,7 +424,7 @@ function handleDirection(dir) {
   // (ex. « +14 », « ×24 »), synchronisé sur le rebond de la tuile résultat.
   if (mergeCount > 0) {
     setTimeout(() => {
-      for (const mc of result.mergedCells) {
+      for (const mc of r.mergedCells) {
         tiles.spawnFloatingText(
           mc.row,
           mc.col,
@@ -472,46 +437,32 @@ function handleDirection(dir) {
 
   // 2) Feedback des contacts invalides : shake des tuiles + SCREEN SHAKE
   // + son d'erreur sourd.
-  if (result.invalidCells.length > 0) {
-    tiles.shake(result.invalidCells);
-    tiles.screenShake({ strong: result.invalidCells.length > 2 });
+  if (r.invalidCells.length > 0) {
+    tiles.shake(r.invalidCells);
+    tiles.screenShake({ strong: r.invalidCells.length > 2 });
     audio.playError();
   }
 
-  // 3) Explosion éventuelle des tuiles-objectif (après le glissement).
-  const { exploded, bonus } = processTargets();
-
-  // Mathic Chain : cette destruction s'enchaine-t-elle à la précédente ?
-  // La fenêtre VISIBLE décrémente à chaque coup sans explosion.
-  let chainInfo = { chained: false, chainLength: 1 };
-  if (exploded.length > 0) {
-    chainInfo = chainTracker.registerTarget(moveIndex);
-  } else if (chainWindowLeft > 0) {
-    chainWindowLeft -= 1;
-    if (chainWindowLeft === 0) hideChain();
-    else showChain(chainCount, chainWindowLeft);
-  }
-  const isCombo = chainInfo.chained;
+  // 3) Explosion des tuiles-objectif : portée et bonus fournis par l'adapter
+  // (classic = lecture clone sur le plateau moteur ; puzzle = engine).
+  const exploded = r.exploded;
+  const isCombo = r.isCombo;
   const preExplosionDelay = exploded.length > 0 ? MOVE_DURATION + 60 : 0;
 
   setTimeout(() => {
     if (exploded.length > 0) {
       // Le combo amplifie visuellement (particules ×, halo doré).
-      tiles.explode(exploded, bonus, { combo: isCombo });
+      tiles.explode(exploded, r.bonus, { combo: isCombo });
       tiles.bumpScore(scoreElement);
-      audio.playExplode(isCombo ? chainInfo.chainLength : 1); // arpège si combo
+      audio.playExplode(isCombo ? game.chainCount : 1); // arpège si combo
       if (isCombo) tiles.screenShake({ strong: true }); // euphorie
-
-      // Badge : ×N visible tant que la fenêtre de 2 coups est ouverte.
-      chainCount = chainInfo.chained ? chainInfo.chainLength : 1;
-      chainWindowLeft = 2;
-      showChain(chainCount, chainWindowLeft);
     }
 
-    // 4) Nouvelle tuile + rafraîchissement visuel.
-    // Équilibrage (roadmap 1.2) : spawn STRICTEMENT dans [1..5].
-    let spawnInfo = null;
-    if (mode !== 'puzzle') spawnInfo = spawnRandomTile(board, PUZZLE_STARTER_MAX, gameRng);
+    // Badge CHAIN : la fenêtre de 2 coups est calculée par l'adapter.
+    refreshChainBadge();
+
+    // 4) Rafraîchissement visuel (la tuile spawnée vient du moteur ;
+    // l'affichage classic effondre les tuiles 24).
     tiles.sync(board, targetValueCells());
     updateHud();
 
@@ -521,36 +472,19 @@ function handleDirection(dir) {
         type: 'combo',
         score,
         target: exploded[0].value,
-        chain: chainInfo.chainLength,
+        chain: r.chain.chainLength,
       }).then(coachSay);
     } else {
-      reactToMove(result, exploded, cleaning);
+      reactToMove(r, exploded, r.cleaning);
     }
     if (exploded.length > 0 && mode === 'classic') announceTarget();
-
-    // 6) Fin du coup : on FINALISE l'entrée Calvados (faits exacts + états
-    // immuables + diff vectoriel) — la pile ne perd jamais une ligne.
-    calvados.push(
-      makeEntry({
-        before: beforeBoard,
-        after: board,
-        moves: result.moves,
-        mergedCells: result.mergedCells,
-        spawned: spawnInfo ? [spawnInfo] : [],
-        exploded,
-        gained: result.gained,
-        dir,
-        op: currentOp,
-        snap: snapBefore,
-      })
-    );
 
     setTimeout(() => {
       busy = false;
       resetIdleTimer();
       if (mode === 'puzzle') {
         afterPuzzleMove(exploded);
-      } else if (isGameOver(board)) {
+      } else if (r.gameOver) {
         showGameOver();
       }
     }, SPAWN_DURATION);
@@ -584,41 +518,22 @@ function startPuzzle() {
 
   // G2 : seed déterministe pour la session puzzle.
   sessionSeed = `puzzle-${level.target ?? 'rand'}-${level.moves}-${Date.now()}`;
-  gameRng = createRng(sessionSeed);
   cosmeticRng = createRng(sessionSeed ^ 0xDEADBEEF);
-  puzzleRng = createRng(sessionSeed ^ 0xCAFEBABE);
 
   mode = 'puzzle';
   document.body.dataset.mode = 'puzzle';
-  calvados.clear();
-  chainTracker.reset();
-  moveIndex = 0;
-  chainWindowLeft = 0;
-  chainCount = 0;
   mergeStreak = 0;
   hideChain();
 
-  board = createBoard(rows, cols);
-  score = 0;
-  targetCount = 0;
-  busy = true; // génération BFS en cours
+  // K5 : la génération rétro-ingénierie + validation BFS + la jauge
+  // appartiennent au moteur (via l'adapter) ; seed déterministe.
+  game.newPuzzle({ rows, cols, target: level.target, moves: level.moves, seed: sessionSeed });
+  syncMirror();
 
+  busy = true; // génération BFS en cours
   buildGrid(gridElement, rows, cols);
   const tileLayer = gridElement.querySelector('.tile-layer');
   tiles = createTileManager(tileLayer, rows, cols);
-
-  // CONTRAT G2 : rng OBLIGATOIRE pour la génération déterministe.
-  const generated = generatePuzzle({
-    rows,
-    cols,
-    moves: level.moves,
-    target: level.target,
-    rng: puzzleRng,
-  });
-  board = generated.board;
-  target = generated.target;
-  puzzleMoves = generated.moves; // profondeur RÉELLE (certifiée BFS)
-  movesLeft = generated.moves;
 
   updateHud();
   tiles.sync(board, targetValueCells());
@@ -634,42 +549,38 @@ function startPuzzle() {
 
 /**
  * Annule le dernier coup (Undo) — proposé par Momo quand le puzzle devient
- * insolvable, disponible en continu dans ce mode. Dépile l'entrée Calvados
- * et la joue EN MIROIR :
- *  - `reversePlan` fige le plan exact (dé-fusions, glissements inversés,
- *    spawn retirés) ; `tiles.rewind` anime ce retour avec les MÊMES
- *    éléments DOM (mêmes ids → transitions CSS en sens inverse) ;
- *  - le snapshot complet (`snap`) restaure le score, la jauge de coups,
- *    la cible, la chaîne et le compteur de coups ;
- *  - `sync` fait foi : il recrée les tuiles explosées et retire les résidus.
+ * insolvable, disponible en continu dans ce mode.
+ *  - Le MOTEUR restaure l'état (pile d'états, stream game re-positionné) ;
+ *  - l'adapter fournit le plan graphique exact (`reversePlan`) pour animer
+ *    le retour avec les MÊMES éléments DOM (transitions CSS inverses) ;
+ *  - les miroirs d'affichage (score, jauge, cible, chaîne, compteur de
+ *    coups) sont restaurés depuis l'adapter.
  */
 function undoMove() {
   if (mode !== 'puzzle' || busy) return;
-  const entry = calvados.pop();
-  if (!entry) return;
+  const u = game.undo();
+  if (!u.ok) return;
 
-  board = entry.before;
-  score = entry.snap.score;
-  movesLeft = entry.snap.movesLeft;
-  target = entry.snap.target;
-  targetCount = entry.snap.targetCount;
-  moveIndex = entry.snap.moveIndex;
-  chainWindowLeft = entry.snap.chainWindowLeft;
-  chainCount = entry.snap.chainCount;
-  if (chainWindowLeft === 0) hideChain();
-  else showChain(chainCount, chainWindowLeft);
+  // Miroirs : l'état est déjà restauré côté moteur.
+  board = game.board;
+  score = game.score;
+  target = game.target;
+  targetCount = game.targetCount;
+  movesLeft = game.movesLeft;
+  puzzleMoves = game.puzzleMoves;
+
   busy = true;
 
-  const plan = reversePlan(entry);
-  tiles.rewind(plan);
+  if (u.plan) tiles.rewind(u.plan);
   tiles.sync(board, targetValueCells());
   updateHud();
+  refreshChainBadge();
 
   // L'Undo dégrise aussi l'écran de fin : on annule un dernier coup depuis
   // un game over comme depuis une victoire, et on reprend la main.
   hideGameOver();
 
-  coachReact({ type: 'undo', score, target, ...calvadosContext(entry) }).then(coachSay);
+  coachReact({ type: 'undo', score, target, ...(u.context || {}) }).then(coachSay);
   setTimeout(() => {
     busy = false;
     resetIdleTimer();
@@ -706,8 +617,9 @@ function afterPuzzleMove(exploded) {
     return;
   }
 
-  // Solvabilité temps réel : le coup a-t-il tué le puzzle ?
-  const remaining = minMovesToReach(board, target, movesLeft);
+  // Solvabilité temps réel : le coup a-t-il tué le puzzle ? (adapter =
+  // board moteur, target, coups restants — même primitive que l'ancien code).
+  const remaining = game.solvabilityRemainder();
   if (remaining === null || remaining > movesLeft) {
     if (movesLeft <= 0) {
       showGameOver();
@@ -752,15 +664,14 @@ function startTutorial() {
   document.body.dataset.mode = 'classic'; // undo/jauge gérés par classic
   hideGameOver();
 
+  // Séquence scriptée ISOLÉE : le tutoriel écrit directement ses miroirs
+  // (il ne passe pas par l'adapter — c'est une chorégraphie FTUE, pas la
+  // boucle de jeu). La première vraie partie pose le state moteur via
+  // newGame() au moment du finish.
   board = createBoard(rows, cols);
   score = 0;
   targetCount = 0;
   busy = false;
-  calvados.clear();
-  chainTracker.reset();
-  moveIndex = 0;
-  chainWindowLeft = 0;
-  chainCount = 0;
   mergeStreak = 0;
   hideChain();
 

@@ -283,6 +283,25 @@ console.log("— L7-REPLAY : K3/U1+U2 trois chemins identiques (S1 == S1p == S1p
   check('S1 == S1\' (undo) == S1\'\' (snapshot+x)', deepEqual(s1, s1p) && deepEqual(s1p, s1pp));
 }
 
+console.log("— L7-REPLAY : K5/U3 état terminal aligné (game over + undo) —");
+{
+  // NOTE K5 (découverte) : `isGameOver` n'est évalué QUE sur le nouveau
+  // board d'un coup DÉPLACÉ ; sous ce ruleset un board plein a toujours au
+  // moins un mouvement valide (mul: toute paire, sub: a>b) → le flag ne se
+  // déclenche jamais en pratique. La fin réelle d'une partie vient de la
+  // jauge de coups (puzzle, côté runtime). La porte « undo refusé si
+  // state.isGameOver » (divergence U3) était donc un chemin mort : elle a
+  // été retirée pour aligner la sémantique — undo toujours disponible au
+  // moment où le runtime « dégrise » l'écran de fin.
+  const base = createSession({ mode: 'puzzle', rows: 4, cols: 4, target: 12, moves: 3, seed: 'u3-flux', levelIndex: 0 });
+  const g1 = JSON.parse(JSON.stringify(base.getSnapshot()));
+  base.command('right', 'add');
+  const g2 = JSON.parse(JSON.stringify(base.getSnapshot()));
+  check('puzzle : 2 états distincts (avant/après coup)', JSON.stringify(g1) !== JSON.stringify(g2));
+  check('undo non bloqué dans le flux', base.undo() === true);
+  check('retrouve l\'état initial après undo', JSON.stringify(JSON.parse(JSON.stringify(base.getSnapshot())).board) === JSON.stringify(g1.board));
+}
+
 if (failures > 0) {
   console.error(`\n❌ ${failures} échec(s)`);
   process.exit(1);
