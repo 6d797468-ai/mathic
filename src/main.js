@@ -390,6 +390,7 @@ function reactToMove(result, exploded, cleaning = null) {
 
 function handleDirection(dir) {
   if (busy) return;
+  audio.unlock(); // K6 : le geste de glissement est aussi un déblocage autoplay
 
   // Pendant la découverte, seul le geste qui fusionne 2+3 est accepté.
   if (mode === 'tutorial') {
@@ -878,6 +879,7 @@ operatorButtons.forEach((btn) => {
       }
       return;
     }
+    audio.unlock(); // K6 : le clic d'opérateur est aussi un geste de déblocage
     currentOp = btn.dataset.op;
     updateHud();
   });
@@ -986,9 +988,11 @@ if (audioButton) {
 const unlockAudio = () => {
   audio.unlock();
   window.removeEventListener('pointerdown', unlockAudio);
+  window.removeEventListener('touchend', unlockAudio);
   window.removeEventListener('keydown', unlockAudio);
 };
 window.addEventListener('pointerdown', unlockAudio);
+window.addEventListener('touchend', unlockAudio);
 window.addEventListener('keydown', unlockAudio);
 
 // --- PWA — installation native + hors-ligne total (Phase 5) --------------------

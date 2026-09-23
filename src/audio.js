@@ -39,18 +39,23 @@ export function createAudioManager() {
 
   function ensureCtx() {
     if (typeof window === 'undefined') return null;
-    if (!ctx) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return null;
-      ctx = new AC();
+    try {
+      if (!ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        ctx = new AC();
+      }
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    } catch {
+      ctx = null;
     }
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     return ctx;
   }
 
   /**
-   * À appeler depuis un geste utilisateur (pointerdown / keydown) la première
-   * fois : débloque le contexte pour la session (politique d'autoplay).
+   * À appeler depuis un geste utilisateur (pointerdown / keydown / touchend /
+   * clic) la première fois : débloque le contexte pour la session (politique
+   * d'autoplay).
    */
   function unlock() {
     const c = ensureCtx();
@@ -71,21 +76,25 @@ export function createAudioManager() {
    */
   function tone({ freq, type = 'sine', dur = 0.2, gain = 0.2, delay = 0, glideTo = null }) {
     if (muted) return; // silencieux dans l'état muet (pas même de planification)
-    const c = ensureCtx();
-    if (!c) return;
+    try {
+      const c = ensureCtx();
+      if (!c) return;
 
-    const t0 = c.currentTime + delay;
-    const osc = c.createOscillator();
-    const g = c.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, t0);
-    if (glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, t0 + dur);
-    g.gain.setValueAtTime(gain, t0);
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    osc.connect(g);
-    g.connect(c.destination);
-    osc.start(t0);
-    osc.stop(t0 + dur + 0.03);
+      const t0 = c.currentTime + delay;
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t0);
+      if (glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, t0 + dur);
+      g.gain.setValueAtTime(gain, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      osc.connect(g);
+      g.connect(c.destination);
+      osc.start(t0);
+      osc.stop(t0 + dur + 0.03);
+    } catch {
+      /* K6 : une défaillance audio ne doit jamais casser la boucle de jeu */
+    }
   }
 
   /** « Pop » mat et discret : glissement d'une tuile. */
