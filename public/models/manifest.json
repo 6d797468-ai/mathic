@@ -1,7 +1,7 @@
 {
-  "model": "smollm-135m-math-v7-q2_k.gguf",
-  "size": 88201568,
-  "sha256": "be35b98191277902ff8188e61666be5c661bdc83ce1e560ebc58280902e5b91d",
+  "model": "supra-50m-q4_k_m.gguf",
+  "size": 37446368,
+  "sha256": "67738c0ebc8464eef40dc5b866776a071f930ccde2c420c585af872a45dee53d",
   "version": "1",
-  "generated": "2026-09-22T14:53:08.088Z"
+  "generated": "2026-09-23T01:47:05.624Z"
 }

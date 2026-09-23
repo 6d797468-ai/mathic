@@ -20,7 +20,7 @@ import { readFileSync, writeFileSync, statSync, existsSync } from 'fs';
 import { resolve, basename } from 'path';
 
 const MODEL_PATH = resolve(
-  process.argv[2] ?? 'public/models/smollm-135m-math-v7-q2_k.gguf'
+  process.argv[2] ?? 'public/models/supra-50m-q4_k_m.gguf'
 );
 
 const MANIFEST_PATH = resolve('public/models/manifest.json');
