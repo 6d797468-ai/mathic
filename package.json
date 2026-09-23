@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:b1": "vite build --config vite.b1.config.mjs",
     "preview": "vite preview",
     "test": "node --test && node tests/playtest-puzzle.mjs",
     "test:runtime": "node tests/runtime/game-adapter.test.mjs && node tests/runtime/input-command.test.mjs",
