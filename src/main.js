@@ -41,6 +41,7 @@ import {
   describeTarget,
 } from './targets.js';
 import { createGame, CLASSIC_BONUS, CLASSIC_HIT_BONUS } from './game.js';
+import { createPersistence } from './persistence.js';
 import {
   initAI,
   aiIsReady,
@@ -86,6 +87,8 @@ let tiles = null;
 // (HUD, tuiles, coach), réécrites par l'adapter à chaque coup/undo/nouvelle
 // partie. Seul le tutoriel (séquence scriptée isolée) les écrit en direct.
 const game = createGame();
+// K8 : persistance de session (jouer → fermer → rouvrir → continuer).
+const persistence = createPersistence();
 let board = [];
 let score = 0;
 let target = 0;
@@ -123,6 +126,11 @@ function syncMirror() {
 function refreshChainBadge() {
   if (game.chainWindowLeft > 0) showChain(game.chainCount, game.chainWindowLeft);
   else hideChain();
+}
+
+/** K8 : fige la partie courante (adapter → storage). */
+function saveSession() {
+  persistence.save(game);
 }
 
 // --- Moteur audio + éléments DOM -------------------------------------------
@@ -296,6 +304,7 @@ function newGame() {
   hideGameOver();
   resetIdleTimer();
 
+  saveSession();
   coachWelcome({ target }).then(coachSay);
   announceTarget();
 }
@@ -478,6 +487,7 @@ function handleDirection(dir) {
       reactToMove(r, exploded, r.cleaning);
     }
     if (exploded.length > 0 && mode === 'classic') announceTarget();
+    saveSession();
 
     setTimeout(() => {
       busy = false;
@@ -539,6 +549,8 @@ function startPuzzle() {
   tiles.sync(board, targetValueCells());
   hideGameOver();
 
+  saveSession();
+
   // Annonce certifiée par le solveur : "Cible X. Le chemin parfait se
   // fait en N coups exacts. Pas de droit à l'erreur !"
   coachPuzzleIntro({ target, moves: puzzleMoves }).then(coachSay);
@@ -575,6 +587,7 @@ function undoMove() {
   tiles.sync(board, targetValueCells());
   updateHud();
   refreshChainBadge();
+  saveSession();
 
   // L'Undo dégrise aussi l'écran de fin : on annule un dernier coup depuis
   // un game over comme depuis une victoire, et on reprend la main.
@@ -1035,11 +1048,59 @@ if (
 
 // --- Démarrage -----------------------------------------------------------------------
 
+/**
+ * K8 : reprend la partie sauvegardée (jouer → fermer → rouvrir → continuer).
+ * Réhydrate l'adapter, rebranche les miroirs et reconstruit la grille.
+ * @returns {boolean} true si la reprise a réussi
+ */
+function resumeFromSave() {
+  let payload = null;
+  try {
+    payload = persistence.load();
+  } catch {
+    payload = null;
+  }
+  if (!payload) return false;
+
+  try {
+    game.restoreSnapshot(payload);
+  } catch {
+    persistence.clear();
+    return false;
+  }
+
+  mode = game.mode;
+  document.body.dataset.mode = mode;
+  rows = payload.state.rows;
+  cols = payload.state.cols;
+  syncMirror();
+
+  busy = false;
+  mergeStreak = 0;
+
+  buildGrid(gridElement, rows, cols);
+  const tileLayer = gridElement.querySelector('.tile-layer');
+  tiles = createTileManager(tileLayer, rows, cols);
+
+  hideChain();
+  hideGameOver();
+  updateHud();
+  tiles.sync(board, targetValueCells());
+  resetIdleTimer();
+
+  if (mode === 'puzzle') {
+    coachPuzzleIntro({ target, moves: puzzleMoves }).then(coachSay);
+  } else {
+    coachWelcome({ target }).then(coachSay);
+  }
+  return true;
+}
+
 syncAudioUI();
 // Un tout nouveau joueur entre par le tutoriel FTUE, pas par une grille au hasard.
 if (!isTutorialDone()) {
   startTutorial();
-} else {
+} else if (!resumeFromSave()) {
   newGame();
 }
 startAI();

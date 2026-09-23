@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/build-sw.mjs",
     "preview": "vite preview",
-    "test": "node --test tests/logic.test.mjs tests/diff.test.mjs tests/history.test.mjs && node tests/g1-contracts.test.mjs && node tests/playtest-puzzle.mjs && node tests/g2-determinism.test.mjs && node tests/g3-levels.test.mjs && node tests/g3-worker-verify.test.mjs && node tests/l7-replay.test.mjs && node tests/l12-solver-worker.test.mjs && node tests/k5-adapter.test.mjs",
+    "test": "node --test tests/logic.test.mjs tests/diff.test.mjs tests/history.test.mjs && node tests/g1-contracts.test.mjs && node tests/playtest-puzzle.mjs && node tests/g2-determinism.test.mjs && node tests/g3-levels.test.mjs && node tests/g3-worker-verify.test.mjs && node tests/l7-replay.test.mjs && node tests/l12-solver-worker.test.mjs && node tests/k5-adapter.test.mjs && node tests/k8-persistence.test.mjs",
     "serve:https": "node scripts/https-server.mjs",
     "audit:size": "node scripts/audit-size.mjs",
     "gen:icons": "node scripts/gen-icons.mjs",
