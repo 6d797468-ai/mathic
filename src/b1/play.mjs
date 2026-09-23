@@ -1,8 +1,8 @@
 import { createInterface } from "node:readline";
 import { createSession, apply, enumerateActions, isBlocked, isLost, isWon, finalScore } from "./engine.mjs";
-import { renderGrid } from "./board.mjs";
 import { replay } from "./replay.mjs";
 import { LEVELS, levelBy } from "./levels.mjs";
+import { describe } from "./render.mjs";
 
 const scripted = process.argv[2] === "--scripts";
 const levelArg = scripted ? process.argv[3] : process.argv[2];
@@ -18,14 +18,8 @@ if (!level) {
   process.exit(0);
 }
 
-function describe(state) {
-  const allowed = new Set();
-  for (const c of state.board.cells) if (c !== null && c.kind === "op") allowed.add(c.v);
-  return (
-    `NIVEAU ${state.level.id} « ${level.name} »    OBJECTIF : ${state.level.target}    COUPS : ${state.movesLeft}/${state.level.maxMoves}    SCORE : ${state.score}\n` +
-    `${renderGrid(state.board)}\n` +
-    `Opérateurs autorisés (tuiles) : ${[...allowed].join(" ")} — chaque tuile opérateur est CONSOMMÉE quand utilisée`
-  );
+function describeLv(state) {
+  return describe(level, state);
 }
 
 function parseScriptedTokens(tokens) {
@@ -42,7 +36,7 @@ if (scripted) {
   const actions = parseScriptedTokens(process.argv.slice(4));
   let state = createSession(level);
   console.log("--- " + level.id + " : " + level.name);
-  console.log(describe(state));
+  console.log(describeLv(state));
   let idx = 0;
   for (const act of actions) {
     const before = state;
@@ -57,7 +51,7 @@ if (scripted) {
     const co = before.board.cells[ev.opCell];
     console.log(`  → ${ca.v} ${co.v} ${cb.v} = ${ev.result}   [cellule ${ev.a} ancrée]   +${ev.delta}${ev.chainRun ? ` (dont chaîne +${ev.chainBonus})` : ""}`);
     state = nxt;
-    console.log(describe(state));
+    console.log(describeLv(state));
     idx++;
   }
   if (isWon(state)) console.log(`OBJECTIF ${state.level.target} atteint ! Score final ${finalScore(state)} (dont objectif +10) · coups utilisés ${state.movesLeft}/${state.level.maxMoves}`);
@@ -70,7 +64,7 @@ if (scripted) {
 let state = createSession(level);
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 
-console.log(describe(state));
+console.log(describeLv(state));
 
 function loop() {
   if (isWon(state)) {
@@ -80,7 +74,7 @@ function loop() {
       if (t === "q") return rl.close();
       if (t === "re") {
         state = createSession(level);
-        console.log("\n" + describe(state));
+        console.log("\n" + describeLv(state));
         return loop();
       }
       return loop();
@@ -94,7 +88,7 @@ function loop() {
       if (t === "q") return rl.close();
       if (t === "re") {
         state = createSession(level);
-        console.log("\n" + describe(state));
+        console.log("\n" + describeLv(state));
         return loop();
       }
       return loop();
@@ -110,14 +104,14 @@ function loop() {
     if (t === "q") return rl.close();
     if (t === "re") {
       state = createSession(level);
-      console.log("\n" + describe(state));
+      console.log("\n" + describeLv(state));
       return loop();
     }
     if (t === "undo") {
       const before = state.trace.slice(0, -1);
       const r = replay(level, before).final;
       state = r;
-      console.log("\n" + describe(state));
+      console.log("\n" + describeLv(state));
       return loop();
     }
     if (t === "trace") {
@@ -144,7 +138,7 @@ function loop() {
     const co = before.board.cells[ev.opCell];
     console.log(`→ ${ca.v} ${co.v} ${cb.v} = ${ev.result}    [résultat ancré en cellule ${ev.a}]   score +${ev.delta}${ev.chainRun ? ` (chaîne ×${ev.chainRun})` : ""}`);
     state = nxt;
-    console.log("\n" + describe(state));
+    console.log("\n" + describeLv(state));
     console.log(`coups légaux restants : ${enumerateActions(state).length}`);
     loop();
   });
