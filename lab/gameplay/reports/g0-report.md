@@ -1,8 +1,8 @@
-# GATE 1 — Gameplay Laboratory : A vs B
+# GATE 1 — Gameplay Laboratory : A vs B (rapport complet, passe de retest A-v2 incluse)
 
 > Question : les nouvelles règles produisent-elles de MEILLEURES DÉCISIONS que V4 ?
 
-## Concept A — Chaînes
+## Concept A — Chaînes (v1 · curation serrée)
 
 | id | solvable | minMoves | nbSols | branching | deadEnd% | decision% | divMinSeq |
 |----|----------|----------|--------|-----------|----------|-----------|-----------|
@@ -16,6 +16,21 @@
 | a-08 | Séquence stricte | ✓ | 2 | 1 | 1 | 45 | 36 | 1 |
 | a-09 | Opérateur exigé | ✓ | 2 | 1 | 1 | 38 | 13 | 1 |
 | a-10 | Plafond sous tension | ✓ | 2 | 1 | 1 | 0 | 0 | 1 |
+
+## Concept A — Chaînes (v2 · curation desserrée — retest design)
+
+| id | solvable | minMoves | nbSols | branching | deadEnd% | decision% | divMinSeq |
+|----|----------|----------|--------|-----------|----------|-----------|-----------|
+| a2-01 | Ouverture | ✓ | 1 | 1 | 1 | 0 | 0 | 1 |
+| a2-02 | Deux voies | ✓ | 2 | 2 | 1.27 | 43 | 27 | 2 |
+| a2-03 | Produit d'abord | ✓ | 2 | 1 | 1.29 | 39 | 26 | 1 |
+| a2-04 | Division propre | ✓ | 2 | 1 | 1 | 43 | 14 | 1 |
+| a2-05 | Multiplicités | ✓ | 2 | 4 | 1.26 | 42 | 26 | 1 |
+| a2-06 | Préséance | ✓ | 2 | 1 | 1 | 25 | 25 | 1 |
+| a2-07 | À l'aveugle | ✓ | 3 | 2 | 1.5 | 47 | 44 | 2 |
+| a2-08 | Précision | ✓ | 2 | 1 | 1.29 | 50 | 36 | 1 |
+| a2-09 | Échos | ✓ | 3 | 2 | 1.29 | 37 | 22 | 2 |
+| a2-10 | Libre arbitre | ✓ | 2 | 4 | 1.15 | 42 | 24 | 2 |
 
 ## Concept B — Grille croisée
 
@@ -32,25 +47,43 @@
 | b-09 | 3×3 faible contrainte | ✓ | 9 | 12~ | 11.92 | 0 | 100 | 12 |
 | b-10 | 3×3 lignes/colonnes déséquilibrées | ✓ | 9 | 2~ | 10.67 | 0 | 100 | 2 |
 
+## Évolution de curation A : v1 → v2 (retest §7)
+
+| métrique (         ) | A v1 | A v2 | B |
+|--------------------|-----|-----|---|
+| nTotal             | 10 | 10 | 10 |
+| nSolvable          | 10 | 10 | 9 |
+| branchingMean      | 1.14 | 1.2 | 9.34 |
+| branchingMedian    | 1 | 1.27 | 2.9 |
+| numSolutionsMean   | 1.3 | 1.9 | 4.56 |
+| numSolutionsMedian | 1 | 2 | 2 |
+| diversityMean      | 1.3 | 1.4 | 4.56 |
+| diversityMedian    | 1 | 1 | 2 |
+| trivialCount       | 0 | 0 | 0 |
+| multiCount         | 3 | 5 | 7 |
+| reasoningCount     | 8 | 9 | 9 |
+| deadEndMean        | 0.29 | 0.37 | 0.15 |
+| decisionMean       | 0.22 | 0.24 | 0.75 |
+
 ## Aggrégats A vs B vs V4 (baseline audité · branching 14,6 qualitativement faible)
 
-> `~` = comptage borné par budget de recherche (valeur au minimum). B `(sum)` = refus arithmétique immédiat (grille tout-`+` à total incohérent).
+> `~` = comptage borné par budget de recherche (valeur au minimum). B `(sum)` = refus arithmétique immédiat (grille tout-`+` à total incohérent). V4 : baseline de l'audit (branching 14,6 majoritairement équivalent, min dégénéré MTH-001).
 
-| métrique (         ) | A — Chaînes | B — Grille croisée | V4 (baseline) |
-|--------------------|-------------|-------------------|--------------|
+| métrique (         ) | A v1 | A v2 | B |
+|--------------------|-----|-----|---|
 | nTotal             | 10 | 10 | — |
-| nSolvable          | 10 | 9 | — |
-| branchingMean      | 1.14 | 9.34 | 14.60 |
-| branchingMedian    | 1 | 2.9 | — |
-| numSolutionsMean   | 1.3 | 4.56 | — |
+| nSolvable          | 10 | 10 | — |
+| branchingMean      | 1.14 | 1.2 | 14.60 (V4) |
+| branchingMedian    | 1 | 1.27 | — |
+| numSolutionsMean   | 1.3 | 1.9 | n/a |
 | numSolutionsMedian | 1 | 2 | — |
-| diversityMean      | 1.3 | 4.56 | — |
-| diversityMedian    | 1 | 2 | — |
-| trivialCount       | 0 | 0 | 0.00 |
-| multiCount         | 3 | 7 | — |
-| reasoningCount     | 8 | 9 | 0.00 |
-| deadEndMean        | 0.29 | 0.15 | — |
-| decisionMean       | 0.22 | 0.75 | — |
+| diversityMean      | 1.3 | 1.4 | — |
+| diversityMedian    | 1 | 1 | — |
+| trivialCount       | 0 | 0 | 0 (mais min dégénéré) |
+| multiCount         | 3 | 5 | — |
+| reasoningCount     | 8 | 9 | 0 (audit) |
+| deadEndMean        | 0.29 | 0.37 | — |
+| decisionMean       | 0.22 | 0.24 | — |
 
 ## Sonde anti-MTH-001 (génération naïve, 100 specs seedées)
 
@@ -77,3 +110,5 @@
 ## Décision GATE 1
 
 **B emporte le lot sur les critères G0 mesurables (score A=6/8, B=8/8) ; l'autre concept reste candidat en réserve. Décision finale GATE 1 : voir rapport complet.** (score G0 A=6/8, B=8/8)
+
+**Retest design A (v2) · preuves** : branch 1.2 (v1 1.14), décision 0.24 (v1 0.22), ≥2 solutions 5/10 (v1 3/10), profondeur solution max 3. Conclusion : la curation desserrée double la multiplicité et améliore la densité de décision sans atteindre B ; viabilité de A en mode secondaire, B reste chef de file pour Phase 6.

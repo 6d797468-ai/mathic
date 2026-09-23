@@ -1,4 +1,4 @@
-import { levelsA } from "./levels/a.mjs";
+import { levelsA, levelsA2 } from "./levels/a.mjs";
 import { levelsB } from "./levels/b.mjs";
 import { analyzeLevelA, analyzeLevelB } from "./metrics.mjs";
 import { genSpecA } from "./gen.mjs";
@@ -24,9 +24,10 @@ export function probeMth001(n = 100, baseSeed = "mth-probe") {
 
 export function runAll({ probeN = 100 } = {}) {
   const rowsA = levelsA.map((s) => analyzeLevelA(s));
+  const rowsA2 = levelsA2.map((s) => analyzeLevelA(s));
   const rowsB = levelsB.map((s) => analyzeLevelB(s));
   const probe = probeMth001(probeN);
-  return { rowsA, rowsB, probe };
+  return { rowsA, rowsA2, rowsB, probe };
 }
 
 function mean(xs) {

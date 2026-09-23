@@ -119,3 +119,26 @@ export const levelsA = [
     seed: "lab-a-10",
   },
 ];
+
+export const levelsA2 = [
+  { id: "a2-01", title: "Ouverture", note: "warm-up unique", tutorial: true,
+    line: [3, 2], queue: ["+"], budget: 1, objective: { type: "EXACT_VALUE", value: 5 }, constraints: [] },
+  { id: "a2-02", title: "Deux voies", note: "m2, deux solutions", tutorial: false,
+    line: [2, 3, 5, 4], queue: ["+", "*", "-"], budget: 3, objective: { type: "EXACT_VALUE", value: 11 }, constraints: [] },
+  { id: "a2-03", title: "Produit d'abord", note: "chemin unique m2", tutorial: false,
+    line: [2, 3, 5, 4], queue: ["+", "*", "-"], budget: 3, objective: { type: "EXACT_VALUE", value: 23 }, constraints: [] },
+  { id: "a2-04", title: "Division propre", note: "division exacte", tutorial: false,
+    line: [12, 6, 3], queue: ["/", "+"], budget: 2, objective: { type: "EXACT_VALUE", value: 5 }, constraints: [] },
+  { id: "a2-05", title: "Multiplicités", note: "4 solutions au min", tutorial: false,
+    line: [2, 4, 6, 3], queue: ["+", "*", "-"], budget: 3, objective: { type: "EXACT_VALUE", value: 14 }, constraints: [] },
+  { id: "a2-06", title: "Préséance", note: "séquence stricte d'opérateurs", tutorial: false, sequence: true,
+    line: [4, 3, 6], queue: ["+", "*"], budget: 2, objective: { type: "EXACT_VALUE", value: 42 }, constraints: [] },
+  { id: "a2-07", title: "À l'aveugle", note: "solution profonde m3", tutorial: false,
+    line: [2, 7, 1, 4, 3], queue: ["+", "-", "*"], budget: 3, objective: { type: "EXACT_VALUE", value: 42 }, constraints: [] },
+  { id: "a2-08", title: "Précision", note: "opérateurs restreints", tutorial: false,
+    line: [6, 2, 9, 1, 7], queue: ["+", "-"], budget: 3, objective: { type: "EXACT_VALUE", value: 15 }, constraints: [] },
+  { id: "a2-09", title: "Échos", note: "3 solutions m2", tutorial: false,
+    line: [5, 3, 8, 1], queue: ["+", "-", "*"], budget: 3, objective: { type: "EXACT_VALUE", value: 28 }, constraints: [] },
+  { id: "a2-10", title: "Libre arbitre", note: "4 solutions m2", tutorial: false,
+    line: [3, 6, 2, 8], queue: ["+", "-", "*"], budget: 3, objective: { type: "EXACT_VALUE", value: 7 }, constraints: [] },
+];

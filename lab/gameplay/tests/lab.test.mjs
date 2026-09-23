@@ -4,9 +4,9 @@ import { eval2 } from "../lib/oprel.mjs";
 import * as engineA from "../lib/engine-a.mjs";
 import * as engineB from "../lib/engine-b.mjs";
 import { minMoves, countSolutions } from "../lib/solver.mjs";
-import { levelsA } from "../lib/levels/a.mjs";
+import { analyzeLevelA, analyzeLevelB } from "../lib/metrics.mjs";
+import { levelsA, levelsA2 } from "../lib/levels/a.mjs";
 import { levelsB } from "../lib/levels/b.mjs";
-import { analyzeLevelB } from "../lib/metrics.mjs";
 
 const D = 10;
 
@@ -113,4 +113,11 @@ test("tous les niveaux B listés : solvabilité cohérente (b-07 seul impossible
     if (expectedImpossible.has(spec.id)) assert.equal(res.solvable, false, `${spec.id} doit être non résoluble`);
     else assert.equal(res.solvable, true, `${spec.id} doit être résoluble (rés: ${JSON.stringify(res)})`);
   }
+});
+
+test("A v2 (retest curation) : tous résolvables, un seul tutoriel, ≥3 multi-solutions", () => {
+  const rows = levelsA2.map((s) => analyzeLevelA(s));
+  assert.equal(rows.filter((r) => r.solvable).length, rows.length, "tous les niveaux A2 doivent être résolubles");
+  assert.equal(levelsA2.filter((s) => s.tutorial).length, 1, "exactement un warm-up");
+  assert.ok(rows.filter((r) => r.numSolutions >= 2).length >= 3, "au moins 3 niveaux à ≥2 solutions");
 });

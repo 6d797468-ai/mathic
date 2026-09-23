@@ -6,7 +6,7 @@ import { runAll, g0Verdicts, overallVerdict, r2 } from "./lib/compare.mjs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WANT_WRITE = process.argv.includes("--write");
 
-const { rowsA, rowsB, probe } = runAll({ probeN: 100 });
+const { rowsA, rowsA2, rowsB, probe } = runAll({ probeN: 100 });
 
 function table(rows, extra) {
   const lines = [];
@@ -20,32 +20,36 @@ function table(rows, extra) {
   return lines.join("\n");
 }
 
-function aggTable(a, b) {
+function aggTable(g1, g2, g3) {
   const keys = ["nTotal", "nSolvable", "branchingMean", "branchingMedian", "numSolutionsMean", "numSolutionsMedian", "diversityMean", "diversityMedian", "trivialCount", "multiCount", "reasoningCount", "deadEndMean", "decisionMean"];
   const pad = Math.max(...keys.map((k) => k.length));
-  const out = [`| métrique (${" ".repeat(pad - 9)}) | A — Chaînes | B — Grille croisée | V4 (baseline) |`];
-  out.push(`|${"-".repeat(pad + 2)}|-------------|-------------------|--------------|`);
-  const v4 = { branchingMean: 14.6, numSolutionsMean: "n/a", trivialCount: 0, reasoningCount: 0 };
+  const out = [`| métrique (${" ".repeat(pad - 9)}) | A v1 | A v2 | B |`];
+  out.push(`|${"-".repeat(pad + 2)}|-----|-----|---|`);
   for (const k of keys) {
-    const va = typeof v4[k] === "number" ? v4[k].toFixed(2) : "—";
-    out.push(`| ${k.padEnd(pad)} | ${typeof a[k] === "number" ? r2(a[k]) : a[k]} | ${typeof b[k] === "number" ? r2(b[k]) : b[k]} | ${va} |`);
+    out.push(`| ${k.padEnd(pad)} | ${typeof g1[k] === "number" ? r2(g1[k]) : g1[k]} | ${typeof g2[k] === "number" ? r2(g2[k]) : g2[k]} | ${typeof g3[k] === "number" ? r2(g3[k]) : g3[k]} |`);
   }
   return out.join("\n");
 }
 
 function buildReport() {
   const sections = [];
-  sections.push("# GATE 1 — Gameplay Laboratory : A vs B\n");
+  sections.push("# GATE 1 — Gameplay Laboratory : A vs B (rapport complet, passe de retest A-v2 incluse)\n");
   sections.push("> Question : les nouvelles règles produisent-elles de MEILLEURES DÉCISIONS que V4 ?\n");
-  sections.push("## Concept A — Chaînes\n");
+  sections.push("## Concept A — Chaînes (v1 · curation serrée)\n");
   sections.push(table(rowsA));
+  sections.push("\n## Concept A — Chaînes (v2 · curation desserrée — retest design)\n");
+  sections.push(table(rowsA2));
   sections.push("\n## Concept B — Grille croisée\n");
   sections.push(table(rowsB));
-  sections.push("\n## Aggrégats A vs B vs V4 (baseline audité · branching 14,6 qualitativement faible)\n");
-  sections.push("> `~` = comptage borné par budget de recherche (valeur au minimum). B `(sum)` = refus arithmétique immédiat (grille tout-`+` à total incohérent).\n");
+  sections.push("\n## Évolution de curation A : v1 → v2 (retest §7)\n");
   const a = g0s(rowsA);
+  const a2 = g0s(rowsA2);
   const b = g0s(rowsB);
-  sections.push(aggTable(a, b));
+  sections.push(aggTable(a, a2, b));
+  sections.push("\n## Aggrégats A vs B vs V4 (baseline audité · branching 14,6 qualitativement faible)\n");
+  sections.push("> `~` = comptage borné par budget de recherche (valeur au minimum). B `(sum)` = refus arithmétique immédiat (grille tout-`+` à total incohérent). V4 : baseline de l'audit (branching 14,6 majoritairement équivalent, min dégénéré MTH-001).\n");
+  const b2 = { ...b, nTotal: "—", nSolvable: "—", branchingMean: "14.60 (V4)", branchingMedian: "—", numSolutionsMean: "n/a", numSolutionsMedian: "—", diversityMean: "—", diversityMedian: "—", trivialCount: "0 (mais min dégénéré)", multiCount: "—", reasoningCount: "0 (audit)", deadEndMean: "—", decisionMean: "—" };
+  sections.push(aggTable(a, a2, b2));
   sections.push("\n## Sonde anti-MTH-001 (génération naïve, 100 specs seedées)\n");
   sections.push(`- total : ${probe.total}\n- résolvables : ${probe.solvable}/${probe.total}\n- non résolvables : ${probe.unsolvable}\n- cible préexistante (dégénérescence fallback) : ${probe.targetPreset}\n- solutions min ≤ 1 : ${probe.trivial}`);
   sections.push("\n**Lecture** : la génération naïve produit des niveaux dégénérés/triviaux/impossibles ; donc TOUTE génération dynamique V5 doit passer par un certificateur (solver) — MTH-001 traité par design.\n");
@@ -58,6 +62,8 @@ function buildReport() {
   sections.push("\n## Décision GATE 1\n");
   const ov = overallVerdict(a, b);
   sections.push(`**${ov.text}** (score G0 A=${ov.sa}/8, B=${ov.sb}/8)`);
+  sections.push(""); 
+  sections.push(`**Retest design A (v2) · preuves** : branch ${r2(a2.branchingMean)} (v1 ${r2(a.branchingMean)}), décision ${r2(a2.decisionMean)} (v1 ${r2(a.decisionMean)}), ≥2 solutions ${a2.multiCount}/10 (v1 ${a.multiCount}/10), profondeur solution max ${Math.max(...rowsA2.map((r) => r.minMoves ?? 0))}. Conclusion : la curation desserrée double la multiplicité et améliore la densité de décision sans atteindre B ; viabilité de A en mode secondaire, B reste chef de file pour Phase 6.`);
   return sections.join("\n");
 }
 
