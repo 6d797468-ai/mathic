@@ -31,7 +31,7 @@ Table des opérateurs V1 (fermée) :
 
 ```
 + : (a, b) → a + b                    [associatif-commutatif]
-− : (a, b) → b ≠ a ? a − b : null     [non commutatif ; V1 : valeur strictement négative refusée → null]
+− : (a, b) → (a − b ≥ 0) ? a − b : null   [non commutatif ; résultat négatif refusé → null]
 × : (a, b) → a × b                    [associatif-commutatif]
 ÷ : (a, b) → (b ≠ 0 ∧ a mod b = 0) ? a ÷ b : null   [non commutatif ; division exacte exigée]
 ```
@@ -56,6 +56,7 @@ Contrat de pureté : `apply` ne modifie aucun état d'entrée ; mêmes entrées 
 3. Toute valeur émise par le kernel est un entier vérifiant `VALUE_MIN ≤ v ≤ VALUE_MAX`.
 4. `÷ a b` avec `a mod b = 0` : quotient exact par construction (aucune perte).
 5. Le kernel est **idempotent à l'évaluation** : évaluer deux fois le même couple fournit le même résultat (base du `replay`, §6).
+6. **Invariant dérivé non-négatif** : si tuiles initiales ≥ 0, toutes les tuiles restent ≥ 0 (conséquence : `−` refuse les résultats négatifs ; `×`/`÷` de valeurs ≥ 0 ≥ 0). Le solver peut borner l'espace sur cet invariant (A10 §3).
 
 ## 6. Déterminisme & replay (base de tous les contrats runtime)
 

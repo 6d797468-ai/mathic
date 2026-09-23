@@ -32,7 +32,7 @@ Un niveau est un **objet pur de contenu**. Il ne contient aucune logique. Il est
 ## 3. Règles de validité (fail-fast, A1 §7)
 
 1. `board.cells` : tuiles typées correctement, bornes respectées, rectangle w×h cohérent (A2 §2).
-2. `availableOperations ⊆ OPS` ; toute tuile-opérateur du board ∈ `availableOperations` (sinon tuile intouchable → spec invalide).
+2. **Source unique d'opérateurs** : `availableOperations` est **dérivé des tuiles-opérateurs du board** (aucune double source de vérité, revue B0/C-2). Règles : `availableOperations ≡ ensemble{valeurs des tuiles operator du board}` ; `availableOperations ⊆ OPS`. Un écart entre le champ déclaré et la dérivation effective = spec invalide (fail-fast au chargement). Une tuile-opérateur hors `availableOperations` n'existe pas par construction.
 3. `objective.target` : entier, et **≠ simple répétition d'une valeur initiale** (test de trivialité appliqué en phase d'auteur, A11).
 4. `maxMoves` ≥ 1, entier.
 5. `scoreConfiguration.coefficients` : réels ≥ 0 ; `base.c ≥ 1` (A7 §2).

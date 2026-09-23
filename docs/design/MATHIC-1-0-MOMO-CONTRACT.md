@@ -50,6 +50,7 @@ EXPLANATION / HINT (UI-agnostique)
 ## 4. Anti-fausse explication (mandat §18)
 
 - **Vérifiabilité** : chaque explication référence un `solverFactId` (résultat `apply`, chemin `shortest`, `alternatives`, `deadEnds`, `scoreEnvelope`). **Aucune phrase n'est émise sans être adossée à un fait solver.**
+- **Fail-soft (revue B0/C-7)** : si, au runtime, aucun fait solver n'est disponible (budget de recherche épuisé sur un grand board, niveau non solvable, état terminal), Momo **s'abstient** (pas d'indice) ou émet le message standard « je n'ai pas trouvé d'aide pour l'instant » — **jamais une invention**, jamais un fait « hors solver ».
 - **Sécurité descendante** : si une règle avancée entre (expérimental), Momo ne la commente que si le Solver la modélise (A1 §4). Jamais « c'est comme ça » sur une règle que le moteur ne connaît pas.
 
 ## 5. Fonctionnement hors ligne

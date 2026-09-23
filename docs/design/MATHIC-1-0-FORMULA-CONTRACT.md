@@ -47,9 +47,10 @@ Aucune autre syntaxe V1. **Pas d'expressions arborescentes, pas de parenthèses*
 
 ## 6. Canonique & égalité
 
-- **Égalité sémantique** (pour le solver) : deux expressions sont « même mathématique » si elles produisent même résultat sur même opérateur et opérandes, modulo l'ordre pour `+`/`×` (réordonnancer `a,b` par valeur croissante pour `+`/`×` comme clé de concurrence) — la représentation joueur conserve son ordre.
-- **Représentation de replay** : triplet ordonné immuable `[a, op, b]` (A1 §7bis).
-- **Représentation pour le solver** (A10) : nœud = état hash `h(state)` + action candidat `[a, op, b]` ; le solver réordonne `+`/`×` pour éviter la duplication `(6,4)` vs `(4,6)`.
+- **Égalité sémantique** (pour le solver) : deux expressions sont « même mathématique » si elles produisent même résultat sur même opérateur et opérandes, modulo l'ordre pour `+`/`×`.
+- **Dédup solver de transitions (clé CELLULAIRE, pas valeur)** : pour `+`/`×`, deux actions NE sont dédupliquables que si la **paire non ordonnée de cellules** est identique — le résultat est ancré sur la cellule de l'opérande 1 (A4 §2), donc `(6@c0, ×, 4@c1)` et `(4@c1, ×, 6@c0)` produisent le même état final (paire de cellules {c0,c1}), mais `(4@c0, ×, 6@c1)` — même valeur en _, cellules différentes → **état final différent**, à ne PAS dédupliquer. Le réordonnancement par valeur est réservé à l'ÉGALITÉ de résultat, jamais à la dédup de transitions (conséquence transversale pull — équivaut A4 + A10).
+- **Représentation de replay** : triplet ordonné immuable `[a, op, b]` (A1 §7bis) + **positions `(rA,cA),(rB,cB),(rO,cO)`** enregistrées — sans elles, l'ancrage (A4 §2) n'est pas rejouable à l'identique.
+- **Représentation pour le solver** (A10) : nœud = état hash `h(state)` + action candidat `[a, op, b]` ; les cellules participent au hash d'état et à la clé de dédup (ci-dessus).
 
 ## 7. Déterminisme
 

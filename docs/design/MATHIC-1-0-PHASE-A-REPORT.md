@@ -2,6 +2,8 @@
 
 **Référence** : mandat §35 · **Date** : 2026-09-23 · **Statut** : DESIGN (à valider architecte). Ce rapport répond aux 20 questions de la Phase A après production des 16 contrats + traçabilité + statut.
 
+**Mise à jour Phase B (2026-09-23) — revue croisée** : la cohérence inter-contrats a été vérifiée dans `MATHIC-1-0-CROSS-CONTRACT-REVIEW.md` (gate B0). Trois défauts corrigés (K-0 `−`, C-3 dédup cellulaire, C-2 source d'opérateurs), une ambiguïté résolue (C-1 combo), une garde ajoutée (C-7 Momo fail-soft). Verdict **B0 = PROVEN (cohérence) sous réserve EXP** : le §20 de ce rapport est conforme, mais les mécaniques H-B1/H-3→1/H-AN et le seuil combo sont des **hypothèses à prouver par le slice B1**, pas acquises.
+
 ---
 
 ## 1. Boucle de gameplay définitive proposée

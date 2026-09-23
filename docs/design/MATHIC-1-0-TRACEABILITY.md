@@ -32,6 +32,8 @@ Légende gates (BRIEF §16 et roadmap) : G0=Intégrité math · G1=Gameplay Core
 |---|---|---|---|---|---|---|
 | R11 | Chaîne = dépendance de résultats, propriété gameplay (BRIEF §3) | A5 | `core/chain` | chain-detect (maintenir/casser), chain-recalc-undo | — | G3 |
 | R12 | Combo à cause mathématique, configurable, anti-farm (BRIEF §3) | A6 | `core/combo` | combo-trigger (chaque cause), combo-cycle-excluded, combo-bound | — | G3 |
+| R12b | `comboThreshold` configurable, EXP (corr. B0/C-1) | A6 §2 | `core/combo` | combo-threshold (N ∈ {3,4,5,6} comparés en simulation+playtest) | calibrage combo | G3/G6 |
+| R12c | Anti-double comptage combo/objective (revue B0 §1) | A6 §5+A7 §2 | `core/combo` + `core/score` | combo-no-doublecount (TARGET jamais cumulé au bonus objective sur la même action) | — | G3/G4 |
 | R13 | Score = composants × coefficients, data-driver, non définitif (BRIEF §4, mandate §11) | A7 | `core/score` | score-components, score-zero, score-reconfig (data→moteur intact) | calibrage (sim+humain) | G4 |
 | R14 | Objectifs validés (target/maxMoves/ops) vs expérimentaux (BRIEF §6) | A8 | `core/objectives` | objective-eval, objective-blocked, maxMoves-fail | — | G1/G² |
 | R15 | Victoire/échec/bloqué purs (mandat §4) | A8 §3 | `core/objectives`+`core/game-state` | obj-win, obj-fail, obj-blocked≠failed, no-side-effect | — | G1 |
@@ -43,6 +45,8 @@ Légende gates (BRIEF §16 et roadmap) : G0=Intégrité math · G1=Gameplay Core
 | R16 | Niveau = équation de contraintes versionnable (BRIEF §6, mandate §13) | A9 | `core/content` | level-validate, level-version-migrate, level-ruleVersion-guard | — | G5 |
 | R17 | Solver : solvabilité, count, shortest, alternatives, enveloppe (BRIEF §12) | A10 | `solver/` | solver-solvable, solver-shortest, solver-envelope, solver-cache | rapport A10 | G6 |
 | R18 | Même sémantique que le moteur, jamais une copie (mandat §14) | A10 §2 | `solver/` | solver-vs-engine (table d'équivalence par niveau) | — | G6 |
+| R18b | Conformité de TRANSITION moteur ≡ solver (corr. B0/C-3) | A4+A10+A3 §6 | `solver/` + `core/transformation` | solver-vs-engine-transition (propriété : pour toute action valide, applyTransformation ≡ transition) | — | G6 |
+| R18c | Dédup solver par paire de CELLULES, jamais par valeur (corr. B0/C-3) | A3 §6 | `solver/` | solver-dedup-cell (états distincts non confondus, ancrage conservé) | — | G6 |
 | R19 | Certification pipeline, niveau non certifié = non-prod (BRIEF §14, mandate §15) | A11 | `solver/certification` | cert-pipeline (étapes), cert-verdicts, cert-no-cert-no-publish | rapport A11 par niveau | G6/G7 |
 | R20 | Difficulté mesurée (8 dims), pondération calibrée (BRIEF §13, mandat §16) | A12 | `solver/difficulty` | diff-metrics, diff-class-range, diff-deadends, diff-dominance | calibration corpus | G6 |
 | R21 | Tests domination/trivialité/profondeur (mandat §25–27) | A11/A12 | `solver/analysis` | test-domination, test-trivial, test-depth | — | G6 |
@@ -52,6 +56,7 @@ Légende gates (BRIEF §16 et roadmap) : G0=Intégrité math · G1=Gameplay Core
 | # | Exigence BRIEF | Contrat | Module | Tests | Preuve | Gate |
 |---|---|---|---|---|---|---|
 | R22 | Momo coach, jamais autorité math, jamais écrit dans GameState (BRIEF §9, mandat §18) | A14 | `ai/momo` | momo-no-write, momo-fact-verifiable (chaque hint ↔ solverFactId) | — | G9 |
+| R22b | Momo fail-soft : aucun fait solver → abstention (corr. B0/C-7) | A14 §4 | `ai/momo` | momo-failsoft (budget épuisé / niveau non solvable / état terminal → pas d'indice) | — | G9 |
 | R23 | Indices L1–L5 mesurés, pas LA solution d'emblée (BRIEF §9) | A14 §3 | `ai/momo` | momo-policy (L selon profil), momo-reliance-decline | échantillon G7/playtest | G9 |
 | R24 | Fonctionne hors ligne, pas d'IA distante (BRIEF §20) | A14 §5 | `ai/momo` | momo-offline (aucune dsp réseau) | — | G9 |
 
@@ -76,6 +81,8 @@ Légende gates (BRIEF §16 et roadmap) : G0=Intégrité math · G1=Gameplay Core
 | T3 | Test de compréhension = gate humain (G7, BRIEF §19) | A11 HUMAN, A13, tableau §17 | rapport G7 (test décisif 5 phrases §19) | G7 |
 | T4 | Gameplay Freeze post-G7 (BRIEF §16, mandate §29) | tous les contrats (gèle) | décision G7 → zone d'ajout bloquée | G7+ |
 | T5 | Slice 20 niveaux / 5 catégories | A9, A11, A13, pipeline §14 | rapport slice (20 certifiés, échantillon playtesté) | G2–G7 |
+| T7 | **B0 — cohérence inter-contrats** (Phase B) | `MATHIC-1-0-CROSS-CONTRACT-REVIEW.md` (18 paires, 14 scénarios) + corr. K-0/C-1/C-2/C-3/C-7 | rapport B0 (verdict PROVEN sous réserve EXP) | B0 → B1 |
+| T8 | **B1 — slice minimal jouable (preuve des H-\*)** | matrice S1–S9 de la revue B0 | journal de test humain (5 phrases §19), données domination/frustration/équilibrage | B1 → G7 |
 | T6 | Test d'exclusivité (BRIEF §0) | pitch + démo joueur | retour non-équipe (5 phrases) | G7 |
 
 **Règle d'usage** : toute fonctionnalité NON listée est soit une **erreur** à supprimer, soit une **extension** à déclarer (jamais silencieuse). Toute fonctionnalité listée sans gate de sortie = bloquée à la validation.
