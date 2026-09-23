@@ -15,6 +15,7 @@ node_modules
 dist
 dist-b1
 dist-ssr
+artifacts/
 *.local
 
 # Certificats locaux (auto-signés, jamais commités)
