@@ -1,0 +1,12 @@
+{
+  "name": "mathic-v5-gameplay-lab",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Gameplay Laboratory MATHIC V5 - concepts A (chaînes) et B (grille croisée). Isolé de la production V4.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "lab": "node run.mjs",
+    "report": "node run.mjs --write"
+  }
+}
