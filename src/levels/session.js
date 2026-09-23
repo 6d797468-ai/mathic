@@ -184,10 +184,13 @@ export function createSession({
 
     /**
      * Undo (retour en arrière d'un coup).
+     * K5-U3 : autorisé même après game over — on revient à un état
+     * précédent légal (la pile historique ne contient QUE des états
+     * « avant-coup », jamais game-over). Le runtime « dégrise » l'écran
+     * de fin récupère une partie jouable.
      * @returns {boolean}
      */
     undo() {
-      if (state.isGameOver) return false;
       const result = popHistory();
       if (result) {
         drawsLedger.pop();
