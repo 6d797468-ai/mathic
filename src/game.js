@@ -261,7 +261,48 @@ export function createGame({ rows = 4, cols = 4 } = {}) {
 
     /** Snapshot sérialisable (persistance K8). */
     getSnapshot() {
-      return DEEP({ mode, seed: sessionSeed, state: session.getSnapshot() });
+      return DEEP({
+        v: 1,
+        mode,
+        seed: sessionSeed,
+        classicBonus,
+        targetCount,
+        puzzleBudget,
+        state: session.getSnapshot(),
+      });
+    },
+
+    /**
+     * Réhydrate une partie depuis un snapshot (persistance K8 : jouer →
+     * fermer → rouvrir → continuer). Reconstruit la session moteur puis
+     * replie les compteurs de présentation. L'historique d'undo moteur
+     * repart à zéro (les états passés ne sont pas sérialisés) — l'undo
+     * post-reprise est donc indisponible jusqu'au prochain coup.
+     * @param {Object} payload snapshot produit par getSnapshot()
+     * @throws {Error} snapshot invalide ou version incompatible
+     */
+    restoreSnapshot(payload) {
+      if (!payload || payload.v !== 1 || !payload.state) {
+        throw new Error('Snapshot invalide (version)');
+      }
+      const engineMode = payload.mode === 'puzzle' ? 'puzzle' : 'free';
+      session = createSession({
+        mode: engineMode,
+        rows: payload.state.rows,
+        cols: payload.state.cols,
+        seed: payload.seed ?? String(Date.now()),
+      });
+      session.loadSnapshot(payload.state);
+      sessionSeed = String(payload.seed ?? '');
+      mode = payload.mode === 'puzzle' ? 'puzzle' : 'classic';
+      classicBonus = Number.isInteger(payload.classicBonus) ? payload.classicBonus : 0;
+      targetCount = Number.isInteger(payload.targetCount) ? payload.targetCount : 0;
+      puzzleBudget = Number.isInteger(payload.puzzleBudget) ? payload.puzzleBudget : (engineMode === 'puzzle' ? session.moves : 0);
+      puzzleApplied = engineMode === 'puzzle' ? payload.state.moves : 0;
+      undoVisuals.length = 0;
+      chain = createChainTracker();
+      chainWindowLeft = 0;
+      chainCount = 0;
     },
 
     /** Prochain niveau (puzzle) — non utilisé par le runtime V4 actuel. */
