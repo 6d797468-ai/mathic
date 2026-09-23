@@ -204,6 +204,85 @@ console.log('— L7-REPLAY : Replay with undo —');
   check('replay with undo moves identique', snap1.moves === snap2.moves);
 }
 
+console.log('— L7-REPLAY : K3/U1 continuation déterministe après undo —');
+{
+  // Préfixe réellement appliqué : l'annulation efface la commande A ;
+  // continuer avec X doit être identique à jouer X depuis l'état initial.
+  const seed = 'k3-u1';
+  const ref = createSession({ mode: 'free', rows: 4, cols: 4, seed });
+  ref.command('down', 'sub');
+  const refSnap = ref.getSnapshot();
+
+  const s = createSession({ mode: 'free', rows: 4, cols: 4, seed });
+  s.command('right', 'mul'); // A
+  check('precond : A est bien un coup (moves+1)', s.currentMoveIndex >= 1);
+  s.undo(); // retour à S0
+  check('undo ramène à la position de départ', s.currentMoveIndex === 0);
+  s.command('down', 'sub'); // X
+  check('U1 board == [X] directement', deepEqual(s.getSnapshot().board, refSnap.board));
+  check('U1 score == [X] directement', s.getSnapshot().score === refSnap.score);
+  check('U1 moves == [X] directement', s.getSnapshot().moves === refSnap.moves);
+}
+
+console.log('— L7-REPLAY : K3/U2 continuation déterministe après loadSnapshot —');
+{
+  // Snapshot S0 (état initial, moves=0) → loadSnapshot → X :
+  // identique à jouer X directement depuis (seed).
+  const seed = 'k3-u2';
+  const ref = createSession({ mode: 'free', rows: 4, cols: 4, seed });
+  ref.command('up', 'add');
+  ref.undo();
+  const s0 = ref.getSnapshot(); // S0 : état initial, moves 0
+
+  const t1 = createSession({ mode: 'free', rows: 4, cols: 4, seed });
+  t1.loadSnapshot(JSON.parse(JSON.stringify(s0)));
+  t1.command('down', 'sub');
+  const final1 = t1.getSnapshot();
+
+  const t2 = createSession({ mode: 'free', rows: 4, cols: 4, seed });
+  t2.loadSnapshot(JSON.parse(JSON.stringify(s0)));
+  t2.command('down', 'sub');
+  const final2 = t2.getSnapshot();
+
+  const direct = createSession({ mode: 'free', rows: 4, cols: 4, seed });
+  direct.command('down', 'sub');
+  const directSnap = direct.getSnapshot();
+
+  check('U2 load(initial)+X reproductible (t1 == t2)', deepEqual(final1, final2));
+  check('U2 board == [X] directement', deepEqual(final1.board, directSnap.board) && deepEqual(final1.score, directSnap.score) && deepEqual(final1.moves, directSnap.moves));
+}
+
+console.log("— L7-REPLAY : K3/U1+U2 trois chemins identiques (S1 == S1p == S1pp) —");
+{
+  const seed = 'k3-eq';
+  const X = ['down', 'sub'];
+  const A = ['right', 'mul'];
+
+  // Chemin 1 : seed → [X] directement (préfixe réel = X)
+  const p1 = createSession({ mode: 'free', rows: 4, cols: 4, seed });
+  p1.command(X[0], X[1]);
+  const s1 = p1.getSnapshot();
+
+  // Chemin 2 : seed → [A], undo, [X] (A effacé → préfixe réel = X)
+  const p2 = createSession({ mode: 'free', rows: 4, cols: 4, seed });
+  p2.command(A[0], A[1]);
+  p2.undo();
+  p2.command(X[0], X[1]);
+  const s1p = p2.getSnapshot();
+
+  // Chemin 3 : seed → [A], undo → snapshot S0 → load → [X]
+  const p3 = createSession({ mode: 'free', rows: 4, cols: 4, seed });
+  p3.command(A[0], A[1]);
+  p3.undo();
+  const s0 = JSON.parse(JSON.stringify(p3.getSnapshot()));
+  const p4 = createSession({ mode: 'free', rows: 4, cols: 4, seed });
+  p4.loadSnapshot(s0);
+  p4.command(X[0], X[1]);
+  const s1pp = p4.getSnapshot();
+
+  check('S1 == S1\' (undo) == S1\'\' (snapshot+x)', deepEqual(s1, s1p) && deepEqual(s1p, s1pp));
+}
+
 if (failures > 0) {
   console.error(`\n❌ ${failures} échec(s)`);
   process.exit(1);

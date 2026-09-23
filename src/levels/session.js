@@ -43,6 +43,30 @@ export function createSession({
   const rng = providedRng || createRng(seed);
   const streams = createRngStreams(baseSeed);
 
+  // K3-U1/U2 : la position du flux game est une fonction pure de
+  // (seed, tirages réellement consommés) — jamais un état RNG "opaque"
+  // conservé après undo/load. Axe : seed + préfixe réellement appliqué.
+  // Reposition = re-dérivation déterministe du seed de base avancée de
+  // (baseGameDraws + préfixe) tirages.
+  const SPAWN_DRAWS = 2; // spawnRandomTile = 2 rng.next() (idx + valeur)
+  let baseGameDraws = 0; // tirages du flux game consommés à la création
+  const drawsLedger = []; // tirages consommés par chaque coup appliqué
+
+  const countRng = (stream) => {
+    let n = 0;
+    return {
+      next: (...a) => { n += 1; return stream.next(...a); },
+      get total() { return n; },
+    };
+  };
+
+  const repositionGameStream = (prefixDraws) => {
+    const s = createRngStreams(baseSeed);
+    let n = baseGameDraws + prefixDraws;
+    while (n-- > 0) s.game.next();
+    streams.game = s.game;
+  };
+
   // Configuration du niveau
   let puzzleTarget = target;
   let puzzleMoves = moves;
@@ -74,7 +98,9 @@ export function createSession({
     state = { ...state, board: generated.board, target: generated.target, moves: generated.moves };
   } else {
     // Mode free : remplir avec 6 tuiles initiales
-    fillInitialTiles(state.board, 6, 5, streams.game);
+    const fillCounter = countRng(streams.game);
+    fillInitialTiles(state.board, 6, 5, fillCounter);
+    baseGameDraws = fillCounter.total;
   }
 
   // Historique pour undo (pile d'états complets)
@@ -138,7 +164,9 @@ export function createSession({
       }
 
       pushHistory();
-      const { state: newState, events } = applyCommand(state, { type: 'MOVE', dir, op }, streams.game);
+      const gameCounter = countRng(streams.game);
+      const { state: newState, events } = applyCommand(state, { type: 'MOVE', dir, op }, gameCounter);
+      drawsLedger.push(gameCounter.total);
       state = newState;
       recordEvents(events);
 
@@ -162,6 +190,8 @@ export function createSession({
       if (state.isGameOver) return false;
       const result = popHistory();
       if (result) {
+        drawsLedger.pop();
+        repositionGameStream(drawsLedger.reduce((a, b) => a + b, 0));
         recordEvents([{ type: 'UNDO_APPLIED', moveIndex: state.moves, timestamp: Date.now() }]);
       }
       return result;
@@ -206,6 +236,7 @@ export function createSession({
       }
 
       history.length = 0;
+      drawsLedger.length = 0;
       eventLog = [startEvent];
     },
 
@@ -227,6 +258,16 @@ export function createSession({
       }
       state = cloneState(snapshot);
       history.length = 0;
+      drawsLedger.length = 0;
+      // Re-dérive la position du flux game à partir de (seed, préfixe) :
+      // en mode free, chaque coup appliqué consomme SPAWN_DRAWS tirages ;
+      // en mode puzzle (target !== null) le flux game n'est jamais consommé
+      // par les coups. Estimation exacte pour le cas nominal (chaque coup
+      // du snapshot a spawné), reproductible dans tous les cas.
+      const applied = snapshot.target === null ? Math.max(0, snapshot.moves) : 0;
+      const prefixDraws = applied * SPAWN_DRAWS;
+      for (let i = 0; i < applied; i++) drawsLedger.push(SPAWN_DRAWS);
+      repositionGameStream(prefixDraws);
     },
 
     /**
