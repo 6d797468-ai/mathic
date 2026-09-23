@@ -70,6 +70,15 @@ Toute violation s'écrit en erreur explicite et précède l'exécution :
 - `opérateur inconnu` : systématique au chargement d'une spec/contenu (§7 du BRIEF, fail-fast), jamais au runtime.
 - `opérande non entier` · `diviseur nul` · `division non exacte` · `résultat négatif` · `résultat hors bornes (±)` : catégories d'invalidation fixes, réutilisées par le Solver (§12 BRIEF) pour expliquer pourquoi une route est morte.
 
+## 7bis. Sérialisation & représentation canonique
+
+Le kernel définit la représentation EXTERNE de toute valeur/trace qu'il émet (les contrats runtime l'utilisent telle quelle) :
+
+- **VALEUR** : entier pur (décimal, pas d'exposant). Sérialisation JSON = nombre entier ; les bornes s'appliquent à la lecture (un `4097` ou un `3.14` en entrée = spec invalide, fail-fast).
+- **ACTION (trace)** : triplet ordonné canonique `{"a": int, "op": "+|−|×|÷", "b": int}`. L'ordre `(a, b)` est celui du calcul — pour `+`/`×`, l'ordre positif-petit-d'abord est canonique au niveau SOLVER (A10) ; au niveau PLAYER, l'ordre joué est conservé tel quel (le joueur choisit).
+- **RÉSULTAT** : `r` entier dans bornes, ou le littéral `null` (action invalide). Jamais d'objet d'erreur dans la sortie d'évaluation.
+- Règle de vessie : toute valeur lue depuis une persistance ou un niveau passe par le kernel §5 avant usage (∞/NaN/flottant = corruption).
+
 ## 8. Contrats descendants (ce que PHASE 2+ consommera)
 
 Le kernel expose la sémantique **définie**, pas des helpers d'état. Les contrats suivants consomment :
