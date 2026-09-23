@@ -121,3 +121,42 @@ test("A v2 (retest curation) : tous résolvables, un seul tutoriel, ≥3 multi-s
   assert.equal(levelsA2.filter((s) => s.tutorial).length, 1, "exactement un warm-up");
   assert.ok(rows.filter((r) => r.numSolutions >= 2).length >= 3, "au moins 3 niveaux à ≥2 solutions");
 });
+
+test("B : validateSpec rejette les specs corrompues (class de bugs du lab)", () => {
+  const ok = levelsB[0];
+  const bad = [
+    JSON.parse(JSON.stringify({ ...ok, grid: [[2, 5], [2]] })),
+    JSON.parse(JSON.stringify({ ...ok, rows: ok.rows.slice(0, 1) })),
+    JSON.parse(JSON.stringify({ ...ok, cols: ok.cols.slice(0, 1) })),
+    JSON.parse(JSON.stringify({ ...ok, rows: ok.rows.map((l) => ({ ...l, ops: [...l.ops, "+"] })) })),
+    JSON.parse(JSON.stringify({ ...ok, rows: ok.rows.map((l) => ({ ...l, ops: ["%"] })) })),
+    JSON.parse(JSON.stringify({ ...ok, reserve: { ...ok.reserve, 0: 1 } })),
+    JSON.parse(JSON.stringify({ ...ok, reserve: { ...ok.reserve, 3: -1 } })),
+  ];
+  for (const s of bad) assert.throws(() => engineB.validateSpec(s), TypeError, `spec ${JSON.stringify(s).slice(0, 40)}…`);
+});
+
+test("B : validation des specs réelles — toutes passent et determinisme solver inchangé", () => {
+  for (const spec of levelsB) assert.doesNotThrow(() => engineB.validateSpec(spec), `spec ${spec.id} valide`);
+});
+
+test("B : replay fidèle — events PLACE reproduisent le canonical (contrat)", () => {
+  const spec = levelsB[0];
+  const init = engineB.create(spec);
+  let s = init, moves = 0;
+  while (movementless(s) < init.spec.rows.length * init.spec.grid[0].length) {
+    const ms = engineB.getMoves(s);
+    if (!ms.length) break;
+    s = engineB.apply(s, ms[0]); moves++;
+    if (moves > 50) break;
+  }
+  assert.ok(moves > 0, "le replay doit jouer au moins un coup");
+  const replayed = engineB.replay(spec, s.events);
+  assert.deepEqual(replayed.grid, s.grid);
+  assert.equal(replayed.moves, s.moves);
+});
+function movementless(s) {
+  let n = 0;
+  for (const row of s.grid) for (const c of row) if (c !== -1) n++;
+  return n;
+}
