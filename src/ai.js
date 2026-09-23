@@ -1,22 +1,24 @@
 /**
- * ai.js — Coach IA local (SmolLM-135M-Instruct, GGUF Q2_K, ~85 Mo)
+ * ai.js — Coach IA local (Supra-50M, GGUF Q4_K_M, ~36 Mo, modèle BASE)
  *
  * Le modèle tourne 100 % dans le navigateur via wllama (WASM llama.cpp).
  * Aucun serveur, aucune clé API : tout est local et hors-ligne.
  *
- * ARCHITECTURE HYBRIDE — indispensable pour un 135M :
+ * ARCHITECTURE HYBRIDE — indispensable pour un 50M :
  *  - La logique DÉTERMINISTE (board.js/targets.js) calcule les faits.
  *  - Le LLM PHRASE (encouragements, indices, personnalité).
  *  - Banque de répliques riches en secours : le joueur a toujours un
- *    coaching vivant, même si le modèle est lent ou indisponible.
+ *    coaching vivant, même si le modèle est lent, indisponible, ou
+ *    qu'il sort du charabia (garde-fou ai-text.js → retombe sur la banque).
  *
  * API wllama v3 : createCompletion({ prompt, max_tokens, temperature, ... })
  * renvoie une réponse OAI → texte = response.choices[0].text.
  */
 
 import { Wllama } from '@wllama/wllama';
+import { buildPrompt, sanitizeOutput } from './ai-text.js';
 
-const MODEL_URL = `${import.meta.env.BASE_URL}models/smollm-135m-math-v7-q2_k.gguf`;
+const MODEL_URL = `${import.meta.env.BASE_URL}models/supra-50m-q4_k_m.gguf`;
 
 // Binaire wasm de llama.cpp (copié dans public/ au setup → 100 % hors-ligne).
 const WASM_URL = `${import.meta.env.BASE_URL}wllama/wllama.wasm`;
@@ -35,21 +37,6 @@ const MIN_INTERVAL_MS = 1600;
 /** Anti-répétition : éviter de sortir 2 fois la même réplique. */
 let lastSaid = '';
 let lastFallbackKey = '';
-
-/**
- * Le coach a une identité : "Momo", le Hype-Man de MATHIC. Court,
- * chaleureux, taquin — il valorise l'intelligence TACTIQUE du joueur.
- * Règle stricte : les soustractions/divisions qui libèrent de l'espace
- * (coups de « nettoyage ») doivent être félicitées comme du grand art.
- * Un 135M suit mieux un persona simple et répétitif.
- */
-const SYSTEM_PROMPT =
-  'Tu es Momo, coach-hype complice du jeu de maths MATHIC. Réponds toujours ' +
-  'en français, en UNE seule phrase courte (moins de 20 mots), ton chaleureux, ' +
-  'taquin et motivant. Ne décris JAMAIS l’action : valorise l’intelligence ' +
-  'tactique du joueur. Règle STRICTE : quand une soustraction ou une division ' +
-  'libère de l’espace sur un plateau encombré, félicite ce coup de « nettoyage » ' +
-  '(ex : « Superbe nettoyage ! », « Le plateau respire ! »).';
 
 /**
  * Banque de secours : pools de répliques VARIÉES par situation.
@@ -271,37 +258,13 @@ export async function disposeAI() {
 // --- Génération -------------------------------------------------------------
 
 /**
- * Nettoie une sortie de petit modèle : couper à la 1re ligne, limiter la
- * longueur, retirer les artefacts de template.
- * @param {string} text
- * @returns {string}
+ * Construit la réponse du coach : garde-fou ai-text.js ; tout rejet ''
+ * laisse le caller retomber sur la banque de répliques.
  */
-function sanitize(text) {
-  let out = String(text || '');
-  out = out.replace(/<\|im_(start|end)\|>/g, '');
-  out = out.split('\n').map((l) => l.trim()).filter(Boolean)[0] || '';
-  out = out.replace(/^(Momo\s*:\s*)/i, '');
-  if (out.length > 140) out = out.slice(0, 137).trimEnd() + '…';
-  if (out.replace(/[^\p{L}\p{N}]/gu, '').length < 4) return '';
-  return out;
-}
-
-/**
- * Construit un prompt ChatML (format natif de SmolLM-Instruct).
- * @param {string} user
- * @returns {string}
- */
-function chatml(user) {
-  return (
-    `<|im_start|>system\n${SYSTEM_PROMPT}<|im_end|>\n` +
-    `<|im_start|>user\n${user}<|im_end|>\n` +
-    `<|im_start|>assistant\n`
-  );
-}
 
 /**
  * Génère une phrase courte via le LLM (API OAI de wllama v3).
- * Retourne '' si indisponible/échec/timeout.
+ * Retourne '' si indisponible/échec/timeout/charabia.
  * @param {string} userPrompt
  * @param {number} [maxTokens]
  * @returns {Promise<string>}
@@ -312,7 +275,7 @@ async function generate(userPrompt, maxTokens = 40) {
   try {
     const response = await Promise.race([
       wllama.createCompletion({
-        prompt: chatml(userPrompt),
+        prompt: buildPrompt(userPrompt),
         max_tokens: maxTokens,
         temperature: 0.8,
         top_p: 0.9,
@@ -321,7 +284,7 @@ async function generate(userPrompt, maxTokens = 40) {
       new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
     ]);
     if (!response || !response.choices || !response.choices[0]) return '';
-    return sanitize(response.choices[0].text);
+    return sanitizeOutput(response.choices[0].text);
   } catch (err) {
     console.warn('[ai] génération échouée :', err);
     return '';

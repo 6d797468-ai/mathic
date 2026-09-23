@@ -37,3 +37,4 @@ android/.idea/
 *.njsproj
 *.sln
 *.sw?
+ai-models-gguf/
