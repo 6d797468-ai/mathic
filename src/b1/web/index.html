@@ -7,32 +7,35 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <meta name="theme-color" content="#12141c" />
-    <title>MATHIC 1.0 — slice B1</title>
+    <title>MATHIC 1.0 — B1.5</title>
     <link rel="stylesheet" href="./b1-web.css" />
   </head>
   <body>
     <main>
       <header>
-        <h1>MATHIC <span id="lv">b1-1</span></h1>
-        <p id="name" class="name">Le Pont</p>
-        <p id="scenario" class="scenario">S1 — immédiat vs préparation</p>
+        <h1>MATHIC <span id="lv">N1</span></h1>
+        <p id="name" class="name">La Première Formule</p>
       </header>
 
       <section id="hud" class="hud">
-        <div class="hud-item">Objectif <b id="target">48</b></div>
-        <div class="hud-item">Coups <b id="moves">2</b></div>
-        <div class="hud-item">Score <b id="score">0</b></div>
-        <div class="hud-item">Chaîne <b id="chain">0</b></div>
+        <div class="hud-item" id="item-target">Objectif <b id="target">5</b></div>
+        <div class="hud-item" id="item-moves">Coups <b id="moves">1</b></div>
+        <div class="hud-item" id="item-score">Score <b id="score">0</b></div>
+        <div class="hud-item" id="item-chain">Chaîne <b id="chain">0</b></div>
       </section>
 
       <section id="board" class="board" aria-label="grille de jeu"></section>
 
       <section id="formula" class="formula" aria-live="polite">
-        <span class="slot" data-slot="op">?</span>
         <span class="slot" data-slot="a">A</span>
+        <span class="slot" data-slot="op">?</span>
         <span class="slot" data-slot="b">B</span>
+        <span class="eq">=</span>
+        <span id="res" class="slot res-slot">–</span>
+        <button id="commit" type="button" disabled>TRANSFORMER</button>
         <button id="clear" type="button">effacer</button>
       </section>
+      <p id="pv-extra" class="pv-extra"></p>
 
       <p id="status" class="status" aria-live="polite"></p>
 
@@ -41,7 +44,7 @@
         <button id="restart" type="button">Recommencer</button>
       </section>
 
-      <nav id="levels" class="levels" aria-label="niveaux B1"></nav>
+      <nav id="levels" class="levels" aria-label="niveaux B1.5"></nav>
 
       <div id="overlay" class="overlay hidden">
         <div id="overlay-card" class="card"></div>

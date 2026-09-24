@@ -107,3 +107,111 @@ export const LEVELS = [
 export function levelBy(n) {
   return LEVELS.find((l) => l.id === n) ?? null;
 }
+
+export const LADDER = [
+  {
+    id: "N1",
+    name: "La Première Formule",
+    idea: "une idée : sélection → preview → transformation (geste unique)",
+    hud: ["target", "moves"],
+    rows: 1,
+    cols: 3,
+    target: 5,
+    maxMoves: 1,
+    tiles: [
+      { kind: "num", v: 2 },
+      { kind: "op", v: "+" },
+      { kind: "num", v: 3 },
+    ],
+  },
+  {
+    id: "N2",
+    name: "Deux Chemins",
+    idea: "plusieurs formules vers le même objectif (choix = valeur)",
+    hud: ["target", "moves", "score"],
+    rows: 1,
+    cols: 5,
+    target: 5,
+    maxMoves: 1,
+    tiles: [
+      { kind: "num", v: 2 },
+      { kind: "num", v: 3 },
+      { kind: "op", v: "+" },
+      { kind: "num", v: 4 },
+      { kind: "num", v: 1 },
+    ],
+  },
+  {
+    id: "N3",
+    name: "L'État Après",
+    idea: "même objectif, états post-coup différents (l'état d'après compte)",
+    hud: ["target", "moves", "score"],
+    rows: 1,
+    cols: 5,
+    target: 24,
+    maxMoves: 1,
+    tiles: [
+      { kind: "num", v: 6 },
+      { kind: "num", v: 4 },
+      { kind: "op", v: "*" },
+      { kind: "num", v: 8 },
+      { kind: "num", v: 3 },
+    ],
+  },
+  {
+    id: "N4",
+    name: "Le Sacrifice",
+    idea: "premier coup peu rentable, utile ensuite (préparation)",
+    hud: ["target", "moves", "score"],
+    rows: 1,
+    cols: 5,
+    target: 40,
+    maxMoves: 3,
+    tiles: [
+      { kind: "num", v: 12 },
+      { kind: "num", v: 3 },
+      { kind: "op", v: "*" },
+      { kind: "num", v: 4 },
+      { kind: "op", v: "+" },
+    ],
+  },
+  {
+    id: "N5",
+    name: "La Chaîne",
+    idea: "résultat réutilisé → chaîne (aucune solution en 1 coup)",
+    hud: ["target", "moves", "score", "chain"],
+    rows: 1,
+    cols: 6,
+    target: 48,
+    maxMoves: 3,
+    tiles: [
+      { kind: "num", v: 3 },
+      { kind: "num", v: 2 },
+      { kind: "op", v: "+" },
+      { kind: "num", v: 4 },
+      { kind: "op", v: "*" },
+      { kind: "num", v: 8 },
+    ],
+  },
+  {
+    id: "N6",
+    name: "L'Optimisation",
+    idea: "solution rapide vs solution préparée (le score devient décision)",
+    hud: ["target", "moves", "score", "chain"],
+    rows: 1,
+    cols: 5,
+    target: 48,
+    maxMoves: 2,
+    tiles: [
+      { kind: "num", v: 12 },
+      { kind: "num", v: 4 },
+      { kind: "op", v: "*" },
+      { kind: "num", v: 3 },
+      { kind: "op", v: "+" },
+    ],
+  },
+];
+
+export function ladderBy(n) {
+  return LADDER.find((l) => l.id === n) ?? null;
+}
