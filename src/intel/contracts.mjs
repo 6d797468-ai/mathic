@@ -15,18 +15,23 @@ export const DETECTOR_VERSION = 1;
 // A. Player Evidence — faits observables du gameplay (aucune donnée psychologique)
 // ---------------------------------------------------------------------------
 
+// Révision v1.1 (Brique 2) : ajout explicite de LEVEL_RESTARTED (fait de reprise ;
+// retryCount reste une métrique dérivée) et de LEVEL_ABANDONED (abandon ≠ échec ;
+// LEVEL_FAILED ne porte que les véritables échecs du niveau, ex. move_limit).
 export const EVIDENCE_TYPES = Object.freeze([
   "LEVEL_STARTED",
+  "LEVEL_RESTARTED",
   "LEVEL_COMPLETED",
   "LEVEL_FAILED",
+  "LEVEL_ABANDONED",
   "ACTION_PREVIEWED",
   "ACTION_COMMITTED",
   "ACTION_INVALID",
-  "HINT_REQUESTED",
-  "HINT_USED",
   "UNDO_USED",
   "CHAIN_STARTED",
   "CHAIN_BROKEN",
+  "HINT_REQUESTED",
+  "HINT_USED",
   "TIME_TO_FIRST_ACTION",
   "TIME_TO_SOLUTION",
   "SOLUTION_DEPTH",

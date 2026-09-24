@@ -108,25 +108,29 @@ test("INTEL-C1 : documents de contrat présents et complets (marqueurs)", () => 
 // A. Player Evidence
 // ---------------------------------------------------------------------------
 
-test("INTEL-C2 : la liste EVIDENCE_TYPES fige la norme de la feuille de route", () => {
+test("INTEL-C2 : la liste EVIDENCE_TYPES fige la norme (feuille de route + révision v1.1 Brique 2)", () => {
   assert.deepEqual(EVIDENCE_TYPES, [
     "LEVEL_STARTED",
+    "LEVEL_RESTARTED",
     "LEVEL_COMPLETED",
     "LEVEL_FAILED",
+    "LEVEL_ABANDONED",
     "ACTION_PREVIEWED",
     "ACTION_COMMITTED",
     "ACTION_INVALID",
-    "HINT_REQUESTED",
-    "HINT_USED",
     "UNDO_USED",
     "CHAIN_STARTED",
     "CHAIN_BROKEN",
+    "HINT_REQUESTED",
+    "HINT_USED",
     "TIME_TO_FIRST_ACTION",
     "TIME_TO_SOLUTION",
     "SOLUTION_DEPTH",
     "SOLUTION_SCORE",
     "RETRY_COUNT",
   ]);
+  assert.ok(EVIDENCE_TYPES.includes("LEVEL_RESTARTED"), "v1.1 : LEVEL_RESTARTED = fait de reprise");
+  assert.ok(EVIDENCE_TYPES.includes("LEVEL_ABANDONED"), "v1.1 : LEVEL_ABANDONED = abandon ≠ échec");
 });
 
 test("INTEL-C3 : évidence valide acceptée, payload optionnel", () => {
