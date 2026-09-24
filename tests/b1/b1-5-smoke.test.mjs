@@ -64,6 +64,14 @@ function makeEl(tag, { cls = "", hidden = false } = {}) {
 
 const els = {};
 const boardButtons = [];
+const deepFind = (container, t) => {
+  for (const c of container.children ?? []) {
+    if (c.textContent === t) return c;
+    const r = deepFind(c, t);
+    if (r) return r;
+  }
+  return null;
+};
 globalThis.document = {
   getElementById(id) {
     if (els[id]) return els[id];
@@ -86,7 +94,7 @@ globalThis.window = globalThis;
 for (const id of ["lv", "name", "target", "moves", "score", "chain",
   "item-target", "item-moves", "item-score", "item-chain",
   "board", "res", "commit", "clear", "pv-extra", "status",
-  "undo", "restart", "levels", "overlay-card"]) document.getElementById(id);
+  "undo", "restart", "levels", "worlds", "progress", "overlay-card"]) document.getElementById(id);
 document.getElementById("overlay").classList.add("hidden");
 const formula = document.getElementById("formula");
 for (const slot of ["a", "op", "b"]) {
@@ -148,8 +156,29 @@ test("B1.5 — SMOKE DOM : grammaire TAP→PREVIEW→TRANSFORMER jouée en live 
   document.getElementById("clear").dispatch("click");
   assert.equal(qs("a").textContent, "A");
 
+  // ============ déblocage N2→N3→N4 (progression enchaînée, victoires rapides) ============
+  const playPath = (id) => {
+    const btn = deepFind(els["levels"], id);
+    assert.ok(btn, `${id} bouton présent`);
+    btn.dispatch("click");
+    assert.equal(els["lv"].textContent, id, `${id} chargé`);
+    const lvl = LADDER.find((l) => l.id === id);
+    const r = solve(lvl, { maxMoves: lvl.maxMoves, budget: 80000 });
+    const path = r.samplePaths[0];
+    let sim = createSession(lvl);
+    for (const act of path) {
+      tap(act.a);
+      tap(act.op);
+      tap(act.b);
+      els["commit"].dispatch("click");
+      sim = apply(sim, act);
+    }
+    assert.equal(els["overlay"].classList.contains("hidden"), false, `${id} vaincu → déblocage du suivant`);
+  };
+  for (const id of ["N2", "N3", "N4"]) playPath(id);
+
   // ============ N5 : chaîne (2+4=6 à +0, puis 6×8=48) ============
-  const nav5 = els["levels"].children.find((b) => b.textContent === "N5");
+  const nav5 = deepFind(els["levels"], "N5");
   nav5.dispatch("click");
   assert.equal(els["lv"].textContent, "N5");
   assert.equal(els["item-chain"].hidden, false, "N5 affiche la chaîne");
@@ -176,10 +205,10 @@ test("B1.5 — SMOKE DOM : grammaire TAP→PREVIEW→TRANSFORMER jouée en live 
   assert.ok(!kinds.includes("invalid"), "aucune formule invalide sur le parcours propre");
 });
 
-test("B2 — PLAYTHROUGH AUTONOME : les 16 niveaux joués en live par l'UI (TAP→PREVIEW→TRANSFORMER)", () => {
+test("B2/CG — PLAYTHROUGH AUTONOME : les 36 niveaux joués en live par l'UI (TAP→PREVIEW→TRANSFORMER)", () => {
   const qs = (slot) => formula.querySelector(`[data-slot="${slot}"]`);
   const cellBtn = (id) => boardButtons.find((b) => b.dataset.id === String(id));
-  const navBtn = (id) => els["levels"].children.find((b) => b.textContent === id);
+  const navBtn = (id) => deepFind(els["levels"], id);
   const tap = (id) => cellBtn(id).dispatch("click");
 
   for (const lvl of LADDER) {

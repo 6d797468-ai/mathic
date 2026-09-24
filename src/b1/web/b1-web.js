@@ -1,12 +1,15 @@
 import { createSession, apply, evaluate, isWon, isLost, isBlocked, finalScore } from "../engine.mjs";
 import { replay } from "../replay.mjs";
-import { LADDER } from "../levels.mjs";
+import { LADDER, WORLDS, worldOf, nextLevel } from "../levels.mjs";
+import { loadSave, saveNow, markCompleted, isUnlocked, hasWon, worldProgress } from "../save.mjs";
 
 const OP_SYMB = { "+": "+", "-": "−", "*": "×", "/": "÷" };
 
 const $ = (id) => document.getElementById(id);
 
-let level = LADDER[0];
+let save = loadSave();
+let level = (LADDER.find((l) => l.id === save.current && isUnlocked(save, l.id)) ?? LADDER[0]);
+let activeWorld = worldOf(level.id);
 let state = createSession(level);
 let sel = { a: null, op: null, b: null };
 let pv = null;
@@ -98,6 +101,65 @@ function refreshPreview() {
   log({ level: level.id, kind: "preview", action: act, result: ev.result, delta: ev.delta, chainRun: ev.chainRun, targetHit });
 }
 
+function renderLevels() {
+  const wrap = $("levels");
+  wrap.replaceChildren();
+  for (const w of WORLDS) {
+    const block = document.createElement("div");
+    block.className = "world-block" + (w.id === activeWorld ? " active" : "");
+    const title = document.createElement("h3");
+    title.textContent = `${w.id} · ${w.name}`;
+    block.appendChild(title);
+    const row = document.createElement("div");
+    row.className = "level-row";
+    for (const l of LADDER.filter((x) => x.world === w.id)) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = l.id;
+      const reachable = isUnlocked(save, l.id) || hasWon(save, l.id);
+      if (reachable) {
+        if (l.id === level.id) b.classList.add("current");
+        if (hasWon(save, l.id)) b.classList.add("done");
+        b.addEventListener("click", () => switchLevel(l.id));
+      } else {
+        b.classList.add("locked");
+        b.addEventListener("click", () => {
+          setStatus("Niveau verrouillé — termine les niveaux précédents.", "error");
+          log({ level: l.id, kind: "locked" });
+        });
+      }
+      row.appendChild(b);
+    }
+    block.appendChild(row);
+    wrap.appendChild(block);
+  }
+}
+
+function renderWorlds() {
+  const wrap = $("worlds");
+  wrap.replaceChildren();
+  for (const w of WORLDS) {
+    const p = worldProgress(save, w.id);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "world-pill" + (w.id === activeWorld ? " current" : "") + (p.done === p.total && p.total > 0 ? " done" : "");
+    b.dataset.world = w.id;
+    b.textContent = `${w.name} ${p.done}/${p.total}`;
+    b.addEventListener("click", () => {
+      activeWorld = w.id;
+      renderWorlds();
+      renderLevels();
+    });
+    wrap.appendChild(b);
+  }
+}
+
+function renderProgress() {
+  const w = WORLDS.find((x) => x.id === activeWorld) ?? WORLDS[0];
+  const p = worldProgress(save, w.id);
+  $("progress").textContent = `${w.id} · ${w.name} — ${p.done}/${p.total} réussis · ${p.unlocked}/${p.total} ouverts`;
+}
+
 function render() {
   $("lv").textContent = level.id;
   $("name").textContent = level.name;
@@ -148,21 +210,17 @@ function render() {
   $("undo").disabled = state.trace.length === 0;
   $("commit").disabled = true;
 
+  renderWorlds();
+  renderProgress();
   renderLevels();
   renderOverlay();
   refreshPreview();
 }
 
-function renderLevels() {
-  $("levels").replaceChildren();
-  for (const l of LADDER) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.textContent = l.id;
-    if (l.id === level.id) b.classList.add("current");
-    b.addEventListener("click", () => switchLevel(l.id));
-    $("levels").appendChild(b);
-  }
+function persistVictory(nxt) {
+  const score = finalScore(nxt);
+  save = saveNow(markCompleted(save, level.id, { score, movesLeft: nxt.movesLeft }));
+  log({ level: level.id, kind: "completed", score, movesLeft: nxt.movesLeft, unlocked: save.unlocked.length });
 }
 
 function tap(id) {
@@ -241,6 +299,7 @@ function commitAction() {
   state = nxt;
   sel = { a: null, op: null, b: null };
   pv = null;
+  if (nxt.won) persistVictory(nxt);
   render();
 }
 
@@ -264,9 +323,17 @@ function renderOverlay() {
   let buttons = "";
   if (isWon(state)) {
     h2 = "Objectif atteint !";
-    ptext = `Score ${finalScore(state)} (dont objectif +10) · coups restants ${state.movesLeft}`;
+    const bases = state.events.reduce((t, e) => t + e.base, 0);
+    const chained = state.events.reduce((t, e) => t + e.chainBonus, 0);
+    const score = finalScore(state);
+    if (state.events.length) {
+      ptext = `Score ${score} = ${bases} de base + ${chained} de chaînes + 10 d'objectif · coups restants ${state.movesLeft}`;
+    } else {
+      ptext = `Score ${score} (objectif +10) · coups restants ${state.movesLeft}`;
+    }
     buttons = `<button id="ov-again">Rejouer</button>`;
-    if (LADDER[LADDER.findIndex((l) => l.id === level.id) + 1]) {
+    const nxt = nextLevel(level.id);
+    if (nxt && (isUnlocked(save, nxt.id) || hasWon(save, nxt.id))) {
       buttons += `<button id="ov-next" class="ghost">Niveau suivant</button>`;
     }
   } else if (isLost(state)) {
@@ -288,15 +355,21 @@ function renderOverlay() {
   const next = card.querySelector("#ov-next");
   if (next) {
     next.addEventListener("click", () => {
-      const i = LADDER.findIndex((l) => l.id === level.id);
-      switchLevel(LADDER[i + 1].id);
+      const n = nextLevel(level.id);
+      if (n) switchLevel(n.id);
     });
   }
   overlay.classList.remove("hidden");
 }
 
 function switchLevel(id) {
+  if (!isUnlocked(save, id) && !hasWon(save, id)) {
+    setStatus("Niveau verrouillé — termine les niveaux précédents.", "error");
+    log({ level: id, kind: "locked" });
+    return;
+  }
   log({ level: id, kind: "switch" });
+  activeWorld = worldOf(id);
   reset(id);
 }
 

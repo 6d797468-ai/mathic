@@ -197,27 +197,93 @@ header .scenario {
   cursor: pointer;
 }
 
+.worlds {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.world-pill {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.world-pill.current {
+  color: var(--op);
+  border-color: var(--op);
+}
+
+.world-pill.done {
+  color: var(--res);
+  border-color: #1f4a31;
+}
+
+.progress {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .levels {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.world-block {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.world-block h3 {
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.level-row {
+  display: flex;
   gap: 8px;
-  justify-content: center;
   flex-wrap: wrap;
 }
 
-.levels button {
+.level-row button {
   min-width: 40px;
   height: 40px;
   border-radius: 10px;
   border: 1px solid var(--line);
-  background: var(--panel);
+  background: var(--chip);
   color: var(--muted);
   font-size: 13px;
   cursor: pointer;
 }
 
-.levels button.current {
+.level-row button.current {
   color: var(--num);
   border-color: var(--num);
+  background: var(--panel);
+}
+
+.level-row button.done {
+  color: var(--res);
+  border-color: #1f4a31;
+}
+
+.level-row button.locked {
+  opacity: 0.45;
+  cursor: not-allowed;
+  color: var(--muted);
+  border-style: dashed;
 }
 
 .overlay {
