@@ -50,7 +50,7 @@ const DOCS = {
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const validProfile = () => ({ ...defaultProfile(), strategyTendency: 0.7, confidence: 0.9, evidenceWindow: 12 });
+const validProfile = () => ({ ...defaultProfile(), strategy: 0.7, confidence: 0.9, evidenceWindow: 12 });
 
 const deepFreeze = (o) => {
   if (o && typeof o === "object" && !Object.isFrozen(o)) {
@@ -95,7 +95,7 @@ test("INTEL-C1 : documents de contrat présents et complets (marqueurs)", () => 
   }
   assert.ok(txts.evidence.includes("LEVEL_STARTED") && txts.evidence.includes("RETRY_COUNT"), "evidence : liste d'événements complète");
   assert.ok(txts.evidence.includes("age") && txts.evidence.includes("iq"), "evidence : anti-collecte documentée");
-  assert.ok(txts.profile.includes("arithmeticAffinity") && txts.profile.includes("evidenceWindow"), "profile : dimensions documentées");
+  assert.ok(txts.profile.includes("arithmetic") && txts.profile.includes("evidenceWindow"), "profile : dimensions documentées");
   assert.ok(txts.profile.includes("confidence"), "profile : confiance documentée");
   assert.ok(txts.provider.includes("DeterministicProvider") && txts.provider.includes("LocalModelProvider"), "provider : implémentations documentées");
   assert.ok(txts.provider.includes("CloudModelProvider") && txts.provider.includes("FutureProvider"), "provider : implémentations documentées");
@@ -187,8 +187,8 @@ test("INTEL-C7 : profil valide accepté ; corruption rejetée", () => {
   assert.equal(isProfileShape(validProfile()), true);
   assert.deepEqual(validateProfile(validProfile()), []);
   const bad = [
-    { ...defaultProfile(), strategyTendency: 1.5 },
-    { ...defaultProfile(), explorationTendency: -0.1 },
+    { ...defaultProfile(), strategy: 1.5 },
+    { ...defaultProfile(), exploration: -0.1 },
     { ...defaultProfile(), confidence: 2 },
     { ...defaultProfile(), evidenceWindow: -3 },
     { ...defaultProfile(), chainAffinity: Number.NaN },

@@ -7,7 +7,7 @@
 // Le Game Core (Kernel/Engine/Solver/Replay/Levels/Score) ne dépend jamais de ce module.
 
 export const INTEL_PLANE_VERSION = 1;
-export const PROFILE_SCHEMA_VERSION = 1;
+export const PROFILE_SCHEMA_VERSION = 2;
 export const POLICY_VERSION = 1;
 export const DETECTOR_VERSION = 1;
 
@@ -83,11 +83,18 @@ export function validateEvidence(x) {
 // B. Player Profile — état dérivé, explicable, versionné
 // ---------------------------------------------------------------------------
 
+// Schéma v2 (MISSION 2 — Player Profile Detection) : migration explicite et
+// versionnée. Les dimensions du rapport comportemental v1 adoptent le
+// vocabulaire canonique du mandat (arithmetic/exploration/strategy/efficiency),
+// remplaçant les libellés Brique 1 (*Tendency/*Affinity) sans changer la
+// sémantique ni le nombre de dimensions. « comprehension » reste volontairement
+// HORS schéma v2 (absent de la liste v1 du mandat) : toute inclusion future est
+// une révision explicite, jamais une extension silencieuse.
 export const PROFILE_DIMENSIONS = Object.freeze([
-  "arithmeticAffinity",
-  "explorationTendency",
-  "strategyTendency",
-  "efficiencyTendency",
+  "arithmetic",
+  "exploration",
+  "strategy",
+  "efficiency",
   "chainAffinity",
   "hintDependency",
   "retryTolerance",
@@ -98,10 +105,10 @@ export const PROFILE_DIMENSIONS = Object.freeze([
 
 export function defaultProfile() {
   return Object.freeze({
-    arithmeticAffinity: 0,
-    explorationTendency: 0,
-    strategyTendency: 0,
-    efficiencyTendency: 0,
+    arithmetic: 0,
+    exploration: 0,
+    strategy: 0,
+    efficiency: 0,
     chainAffinity: 0,
     hintDependency: 0,
     retryTolerance: 0,

@@ -1,6 +1,6 @@
 # MATHIC 1.0 — Intelligence Contract : Player Profile
 
-**Référence** : Feuille de route MATHIC 1.0 §5.B, §6, §7 (Phase 7 : versionnage/migration) · **Dépend de** : Player Evidence (Brique 2) · **Consommé par** : Progression Policy, Coach, Orchestrator · **Statut** : CONTRAT (socle Brique 1, opposable).
+**Référence** : Feuille de route MATHIC 1.0 §5.B, §6, §7 (Phase 7 : versionnage/migration) · **Dépend de** : Player Evidence (Brique 2) · **Produit par** : Player Profile Detector (Brique 3, `src/intel/profile.mjs`) · **Consommé par** : Progression Policy, Coach, Orchestrator · **Statut** : CONTRAT (opposable) · **Révision v2** (MISSION 2).
 
 Le profil est un **état dérivé**, pas une identité permanente. Il décrit des **propriétés de comportement dans Mathic**, jamais la personne dans son ensemble.
 
@@ -14,24 +14,30 @@ EVIDENCE ──détection──► PROFILE ──recommandation──► POLICY 
 
 Le profil ne choisit jamais directement un niveau. Il produit une recommandation ; la policy décide.
 
-## 2. Schéma (forme figée en Brique 1)
+## 2. Schéma (révision v2 — vocabulaire du détecteur)
 
 ```text
 PlayerProfile
 {
-  arithmeticAffinity      // [0,1]  aisance aux opérations exactes
-  explorationTendency     // [0,1]  essaie plusieurs familles de solutions
-  strategyTendency        // [0,1]  planifie (preview, enchaînements intentionnels)
-  efficiencyTendency      // [0,1]  cherche la route au meilleur score
-  chainAffinity           // [0,1]  usage et protection des chaînes
-  hintDependency          // [0,1]  dépendance aux indices
-  retryTolerance          // [0,1]  acceptation de l'échec / reprise
-  difficultyResponse      // [0,1]  réaction à la montée de difficulté
-  confidence              // [0,1]  confiance du détecteur dans le profil
-  evidenceWindow          // >= 0   nombre d'évidences observées
-  version                 // = PROFILE_SCHEMA_VERSION
+  arithmetic          // [0,1]  aisance aux opérations exactes (objectif atteint, score)
+  exploration         // [0,1]  essaie plusieurs formules / chemins
+  strategy            // [0,1]  planifie (preview, chaînes intentionnelles)
+  efficiency          // [0,1]  routes au meilleur score, chaînes productives
+  chainAffinity       // [0,1]  usage et protection des chaînes
+  hintDependency      // [0,1]  dépendance aux indices
+  retryTolerance      // [0,1]  acceptation de la reprise / re-essai
+  difficultyResponse  // [0,1]  réaction constructive à la difficulté
+  confidence          // [0,1]  confiance du détecteur dans le profil
+  evidenceWindow      // >= 0   nombre d'évidences observées
+  version             // = PROFILE_SCHEMA_VERSION
 }
 ```
+
+**Révision v1 → v2 (explicite, versionnée)** : les dimensions `arithmeticAffinity`, `explorationTendency`, `strategyTendency`, `efficiencyTendency` (Brique 1) sont remplacées par `arithmetic`, `exploration`, `strategy`, `efficiency` — vocabulaire canonique de la MISSION 2 (Player Profile Detection). Même nombre de dimensions, même sémantique ; aucune donnée supplémentaire collectée.
+
+**`comprehension` reste HORS schéma v2** : la liste v1 du mandat ne l'inclut pas. Toute inclusion future est une révision explicite du schéma (Phase suivante), jamais une extension silencieuse.
+
+Le **détecteur actif** est versionné par `DETECTOR_VERSION` (méthode v1 : règles déterministes à fenêtre pondérée récente — voir `MATHIC-1-0-PLAYER-PROFILE-DETECTION.md`).
 
 ## 3. Contraintes du contrat
 
