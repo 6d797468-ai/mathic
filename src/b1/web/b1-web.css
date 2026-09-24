@@ -52,6 +52,14 @@ header .name {
   margin-top: 2px;
 }
 
+header .tagline {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+}
+
 header .scenario {
   font-size: 12px;
   color: var(--muted);
