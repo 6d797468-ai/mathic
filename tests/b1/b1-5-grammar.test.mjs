@@ -23,8 +23,8 @@ function snapshot(state) {
   return JSON.stringify({ cells: cellsSnapshot(state), score: state.score, trace: state.trace, movesLeft: state.movesLeft, won: state.won, nextChain: state.nextChain });
 }
 
-test("B1.5 — LADDER : exactement N1..N6, chaque niveau résolvable dans maxMoves", () => {
-  assert.deepEqual(LADDER.map((l) => l.id), ["N1", "N2", "N3", "N4", "N5", "N6"]);
+test("B1.5/B2 — LADDER : exactement N1..N16, chaque niveau résolvable dans maxMoves", () => {
+  assert.deepEqual(LADDER.map((l) => l.id), ["N1", "N2", "N3", "N4", "N5", "N6", "N7", "N8", "N9", "N10", "N11", "N12", "N13", "N14", "N15", "N16"]);
   for (const l of LADDER) {
     const r = solve(l, { maxMoves: l.maxMoves });
     assert.equal(r.solvable, true, `${l.id} doit être solvable`);

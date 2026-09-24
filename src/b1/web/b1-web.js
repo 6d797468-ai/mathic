@@ -13,6 +13,17 @@ let pv = null;
 
 const boardEl = $("board");
 
+let lastHud = { id: null, score: null, chain: null };
+
+function bump(el, prev, next) {
+  if (Number(prev) === Number(next)) return;
+  el.classList.remove("pop");
+  void el.offsetWidth;
+  el.classList.add("pop");
+  clearTimeout(el._popTimer);
+  el._popTimer = setTimeout(() => el.classList.remove("pop"), 320);
+}
+
 function log(entry) {
   console.log("B1|" + JSON.stringify({ ts: Date.now(), ...entry }));
 }
@@ -94,6 +105,14 @@ function render() {
   $("moves").textContent = state.movesLeft;
   $("score").textContent = state.score;
   $("chain").textContent = state.nextChain;
+  if (lastHud.id !== level.id) {
+    lastHud = { id: level.id, score: state.score, chain: state.nextChain };
+  } else {
+    bump($("score"), lastHud.score, state.score);
+    bump($("chain"), lastHud.chain, state.nextChain);
+    lastHud.score = state.score;
+    lastHud.chain = state.nextChain;
+  }
   applyHud();
 
   boardEl.style.gridTemplateColumns = `repeat(${state.board.cols}, minmax(54px, 1fr))`;

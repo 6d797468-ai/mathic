@@ -1,5 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createSession, apply, evaluate, finalScore } from "../../src/b1/engine.mjs";
+import { replay } from "../../src/b1/replay.mjs";
+import { solve } from "../../src/b1/solver.mjs";
+import { LADDER } from "../../src/b1/levels.mjs";
 
 // --- micro-DOM suffisant pour b1-web.js ---
 function makeEl(tag, { cls = "", hidden = false } = {}) {
@@ -170,4 +174,46 @@ test("B1.5 — SMOKE DOM : grammaire TAP→PREVIEW→TRANSFORMER jouée en live 
   assert.ok(kinds.includes("action"), "des actions ont été journalisées");
   assert.ok(kinds.filter((k) => k === "action").length >= 4, "4 commits réels (N1×2 + N5×2)");
   assert.ok(!kinds.includes("invalid"), "aucune formule invalide sur le parcours propre");
+});
+
+test("B2 — PLAYTHROUGH AUTONOME : les 16 niveaux joués en live par l'UI (TAP→PREVIEW→TRANSFORMER)", () => {
+  const qs = (slot) => formula.querySelector(`[data-slot="${slot}"]`);
+  const cellBtn = (id) => boardButtons.find((b) => b.dataset.id === String(id));
+  const navBtn = (id) => els["levels"].children.find((b) => b.textContent === id);
+  const tap = (id) => cellBtn(id).dispatch("click");
+
+  for (const lvl of LADDER) {
+    navBtn(lvl.id).dispatch("click");
+    assert.equal(els["lv"].textContent, lvl.id, `${lvl.id} chargé`);
+    const r = solve(lvl, { maxMoves: lvl.maxMoves, budget: 300000 });
+    assert.equal(r.solvable, true, `${lvl.id} solvable`);
+    const path = r.samplePaths[0];
+    assert.ok(path, `${lvl.id} chemin gagnant`);
+    let sim = createSession(lvl);
+    for (let i = 0; i < path.length; i++) {
+      const act = path[i];
+      const isLast = i === path.length - 1;
+      tap(act.a);
+      tap(act.op);
+      tap(act.b);
+      const expected = evaluate(sim, act).result;
+      const shown = isLast ? `${expected} ✓` : String(expected);
+      assert.equal(String(els["res"].textContent), shown, `${lvl.id} preview #${i + 1} = ${expected} (hors committé)`);
+      assert.equal(els["commit"].disabled, false, `${lvl.id} échéance #${i + 1} : TRANSFORMER actif`);
+      const before = Number(els["moves"].textContent);
+      els["commit"].dispatch("click");
+      assert.equal(Number(els["moves"].textContent), before - 1, `${lvl.id} un coup consommé au commit`);
+      sim = apply(sim, act);
+      if (isLast) {
+        assert.equal(els["overlay"].classList.contains("hidden"), false, `${lvl.id} victoire`);
+      } else {
+        assert.equal(els["overlay"].classList.contains("hidden"), true, `${lvl.id} pas encore fini au coup #${i + 1}`);
+      }
+    }
+    const expectedScore = finalScore(replay(lvl, path).final);
+    const ovText = els["overlay-card"].innerHTML;
+    assert.ok(ovText.includes("Objectif atteint"), `${lvl.id} overlay victoire`);
+    assert.ok(ovText.includes(`Score ${expectedScore}`), `${lvl.id} score overlay ${expectedScore}`);
+    assert.equal(finalScore(sim), expectedScore, `${lvl.id} score moteur == score UI`);
+  }
 });

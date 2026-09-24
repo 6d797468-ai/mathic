@@ -110,6 +110,7 @@ header .scenario {
   background: #13261b;
   border-color: #1f4a31;
   color: var(--res);
+  animation: mathic-cell-pop 0.35s ease;
 }
 
 .cell:disabled {
@@ -367,4 +368,36 @@ header .scenario {
 
 .formula.shake {
   animation: mathic-shake 0.25s;
+}
+
+/* B2 : causalité minimale — la transformation "pop", le score/la chaîne "bumpent" */
+
+@keyframes mathic-cell-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes mathic-hud-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.hud-item b.pop {
+  display: inline-block;
+  color: var(--res);
+  animation: mathic-hud-pop 0.3s ease;
 }
