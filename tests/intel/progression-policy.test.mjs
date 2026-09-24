@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { LADDER } from "../../src/b1/levels.mjs";
 import { analyzeAll } from "../../src/b1/level-design.mjs";
@@ -471,4 +472,13 @@ test("POLICY_VERSION : la recommandation porte la version du contrat intel", () 
   const r = recommend(INPUTS({ profile: PROFILE_EXPLORER }));
   assert.equal(r.policyVersion, POLICY_VERSION);
   assert.equal(POLICY_VERSION, 1, "version figée au contrat actuel");
+});
+
+test("Simulation de masse : la campagne seedée reste verte (légalité, déterminisme, replis)", () => {
+  // Petit N pour CI ; la campagne complète (5000 + 500 corrompus) est documentée
+  // dans docs/design/MATHIC-1-0-PROGRESSION-POLICY-SIMULATION.md.
+  const out = execSync("node scripts/simulate-policy.mjs --n 400", { encoding: "utf8", cwd: fileURLToPath(new URL("../..", import.meta.url)) });
+  assert.ok(out.includes("AUCUNE VIOLATION"), "verdict simulation vert");
+  assert.ok(out.includes("violations               : 0"), "zéro bypass");
+  assert.ok(out.includes("divergences ✅") || out.includes("divergences \u2705"), "déterminisme confirmé");
 });
