@@ -108,7 +108,7 @@ Contributions B1.5 (11) : structure LADDER + résolvabilité · N1 victoire en 1
 
 - **Commit d'implémentation** : `abfa294`
   `b1.5: grammaire TAP->PREVIEW->TRANSFORMER + onboarding N1-N6 (decision architecte)`
-- **Commit documentaire** : `fec74a3` (ce rapport + revue)  
+- **Commit documentaire** : `566ed8d` (ce rapport + revue)  
   `docs: rapport B1.5 Grammar & Onboarding (implementation) + revue interaction/onboarding`
 - Branche : `kali/v5-gameplay-lab` · origine : `git@github.com:6d797468-ai/mathic.git`.
 
