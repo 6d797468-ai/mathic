@@ -209,7 +209,7 @@ rapport seront pousses sur la branche. Arbre de travail final : propre.
 |--------|---------|
 | `4d26bf7` | cloture de l'anomalie documentaire B1.5 (smoke promu en test durable du repo) |
 | `aaebfc0` | B2 gameplay core : N7–N16 + feedbacks causalite + playthrough autonome (tests) |
-| commit doc | ce rapport + artefacts d'evidence (victoire UI==moteur==replay demontree par les tests) |
+| `1ee0d58` | ce rapport (B2 Gameplay Core, 18 sections) |
 
 Pour verifier tout le contenu B2 : `git show aaebfc0`. Les tests sont executables via
 `npm test` (96/96) et `node tests/playtest-puzzle.mjs`.
