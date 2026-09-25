@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "build:b1": "vite build --config vite.b1.config.mjs",
+    "build:atelier": "vite build --config vite.atelier.config.mjs",
+    "seal:reproducibility": "node scripts/seal-reproducibility.mjs",
     "preview": "vite preview",
     "test": "node --test && node tests/playtest-puzzle.mjs",
     "test:runtime": "node tests/runtime/game-adapter.test.mjs && node tests/runtime/input-command.test.mjs",
