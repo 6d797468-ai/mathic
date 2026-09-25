@@ -1,4 +1,4 @@
-import { LADDER, nextLevel } from "./levels.mjs";
+import { LADDER, nextLevel, windowOf } from "./levels.mjs";
 
 export const SAVE_KEY = "mathic.save.v1";
 
@@ -85,7 +85,11 @@ export function unlockTo(state, id) {
   return { ...state, unlocked: next };
 }
 
-export function markCompleted(state, levelId, { score, movesLeft }) {
+export function markCompleted(
+  state,
+  levelId,
+  { score, movesLeft, horizon = 1 } = {}
+) {
   const rec = state.completed[levelId] ?? { wins: 0, bestScore: null, bestMovesLeft: null };
   const better = rec.bestScore === null || score > rec.bestScore || (score === rec.bestScore && (rec.bestMovesLeft === null || movesLeft > rec.bestMovesLeft));
   const updated = {
@@ -95,8 +99,12 @@ export function markCompleted(state, levelId, { score, movesLeft }) {
   };
   const completed = { ...state.completed, [levelId]: updated };
   let st = { ...state, completed, current: levelId };
-  const nxt = nextLevel(levelId);
-  if (nxt && !st.unlocked.includes(nxt.id)) st.unlocked = [...st.unlocked, nxt.id];
+  // Fenêtre d'anticipation (M8) : horizon=1 ⇒ déblocage N+1 unique (comportement
+  // historique, NON-RÉGRESSIF) ; horizon=k ⇒ déblocage déterministe N+1..N+k.
+  // Cette fenêtre est une règle de progression pure — le profil n'y intervient pas.
+  for (const wid of windowOf(levelId, horizon)) {
+    if (!st.unlocked.includes(wid)) st.unlocked = [...st.unlocked, wid];
+  }
   return st;
 }
 

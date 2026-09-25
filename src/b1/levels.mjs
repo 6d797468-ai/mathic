@@ -860,6 +860,34 @@ export function nextLevel(id) {
   return i >= 0 && i < LADDER.length - 1 ? LADDER[i + 1] : null;
 }
 
+// ---------------------------------------------------------------------------
+// FENÊTRE D'ANTICIPATION (MISSION 8) — paramètre de GAME DESIGN, pas d'IA.
+//
+// PROGRESSION_WINDOW = taille de l'horizon déverrouillé à chaque complétion :
+//   compléter le niveau à l'index i déverrouille DÉTERMINISTIQUEMENT les
+//   indices i+1 … i+k. C'est la seule source d'augmentation de |W(p,t)|
+//   (l'espace de décision de la Policy). Le profil n'a AUCUN mot à dire sur
+//   la taille ou la composition de cette fenêtre (règle de progression pure).
+//
+// Note design : les mondes (WORLDS) sont une taxonomie pédagogique ENTRELACÉE
+// dans l'ordre de LADDER — ils ne forment pas des chapitres contigus — donc la
+// fenêtre ne traverse aucune « frontière de campagne » (vérifié M8).
+// ---------------------------------------------------------------------------
+
+export const PROGRESSION_WINDOW = 3;
+
+export function windowOf(id, k = PROGRESSION_WINDOW) {
+  const i = LADDER.findIndex((l) => l.id === id);
+  if (i < 0) return [];
+  const span = Math.max(0, Math.floor(Number(k) || PROGRESSION_WINDOW));
+  const out = [];
+  for (let j = 1; j <= span; j++) {
+    if (i + j >= LADDER.length) break;
+    out.push(LADDER[i + j].id);
+  }
+  return out;
+}
+
 export function prevLevel(id) {
   const i = LADDER.findIndex((l) => l.id === id);
   return i > 0 ? LADDER[i - 1] : null;

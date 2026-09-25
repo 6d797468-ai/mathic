@@ -1,6 +1,6 @@
 import { createSession, apply, evaluate, isWon, isLost, isBlocked, finalScore } from "../engine.mjs";
 import { replay } from "../replay.mjs";
-import { LADDER, WORLDS, worldOf, nextLevel } from "../levels.mjs";
+import { LADDER, WORLDS, worldOf, nextLevel, PROGRESSION_WINDOW } from "../levels.mjs";
 import { loadSave, saveNow, markCompleted, isUnlocked, hasWon, worldProgress, pickStorage } from "../save.mjs";
 import { createIntelNavigation } from "./intel-navigation.mjs";
 
@@ -228,9 +228,11 @@ function render() {
 
 function persistVictory(nxt) {
   const score = finalScore(nxt);
-  save = saveNow(markCompleted(save, level.id, { score, movesLeft: nxt.movesLeft }));
+  // Fenêtre d'anticipation (M8) : déblocage déterministe N+1..N+PROGRESSION_WINDOW.
+  // Règle de progression pure — le profil n'intervient pas sur |W|.
+  save = saveNow(markCompleted(save, level.id, { score, movesLeft: nxt.movesLeft, horizon: PROGRESSION_WINDOW }));
   nav.finishLevel({ won: true, score, movesLeft: nxt.movesLeft });
-  log({ level: level.id, kind: "completed", score, movesLeft: nxt.movesLeft, unlocked: save.unlocked.length });
+  log({ level: level.id, kind: "completed", score, movesLeft: nxt.movesLeft, horizon: PROGRESSION_WINDOW, unlocked: save.unlocked.length });
 }
 
 function tap(id) {
