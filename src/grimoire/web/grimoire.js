@@ -50,8 +50,17 @@ const saga = createSaga({
 const maggeek = createMaggeek({ facts: solverFacts });
 const momo = createMomo({ coach: maggeek, provider: null, mode: momoMode(typeof window !== "undefined" ? window : undefined) });
 
+// M20 PWA : registration du Service Worker + haptics via Vibration API
+if ("serviceWorker" in window.navigator) {
+  window.navigator.serviceWorker.register("./sw.js").catch(() => {});
+}
+function vibrate(pattern) {
+  const nav = window.navigator;
+  if ("vibrate" in nav) nav.vibrate(pattern);
+}
+
 // ---------------------------------------------------------------------------
-// Vues — chaque écran de la machine a SON conteneur ; rien d'autre ne s'affiche
+// Vue : saga
 // ---------------------------------------------------------------------------
 
 const VUES = ["vue-saga", "vue-index", "vue-session", "vue-resolu", "vue-echec"];
@@ -339,10 +348,12 @@ function renderV5Board(vm) {
 
 function handlePlayResult(r) {
   if (!r.ok) {
+    vibrate([30, 30, 30]);
     setStatus($("session-out"), r.reason === "MOVE_ILLEGAL" ? "La loi refuse cette incantation." : `Refusé : ${r.reason}`, "err");
     renderSession();
     return;
   }
+  vibrate([10]);
   setStatus($("session-out"), "");
   if (r.status.screen === "RESOLVED") renderResolved();
   else if (r.status.screen === "FAILED") renderFailed();
@@ -350,6 +361,7 @@ function handlePlayResult(r) {
 }
 
 function renderResolved() {
+  vibrate([20, 30, 100]);
   showVue("vue-resolu");
   const st = grimoire.status();
   const rw = grimoire.reward();
@@ -366,6 +378,7 @@ function renderResolved() {
 }
 
 function renderFailed() {
+  vibrate([50, 100, 50]);
   showVue("vue-echec");
   const st = grimoire.status();
   setStatus($("echec-out"), `Plus de coups sur ${st.levelId} — la page reste ouverte.`);
