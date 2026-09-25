@@ -32,17 +32,26 @@ Aucun champ nouveau persisté. Aucune migration. Aucun backfill : la projection 
 
 Pour un niveau `L` de la campagne, avec `rec = save.completed[L.id]` et `env = solve(L)` (enveloppe solveur, memoïsée) :
 
+```text
+coupsConsommés (used) = L.maxMoves − rec.bestMovesLeft   [meilleure victoire]
+minMoves              = env.minMoves                      [optimum certifié solveur]
+```
+
 | Étoile | Condition | Source de données | Justification contrat |
 |---|---|---|---|
 | ⭐1 | `rec.wins ≥ 1` | save (existant) | A13 §2 — « objectif atteint » |
-| ⭐2 | `rec.bestMovesLeft ≥ 1` | save (existant) | A13 §2 — « contrainte remplie » par défaut : terminer avec au moins un coup d'avance |
-| ⭐3 | `L.maxMoves − rec.bestMovesLeft ≤ env.minMoves` | save + solveur | A13 §2/§6 — « efficacité proche de l'optimum » : joué aussi vite que la solution minimale certifiée |
+| ⭐2 | `used < L.maxMoves` **OU** `env.minMoves === L.maxMoves` | save + solveur | A13 §2 — « contrainte remplie » : victoire avec au moins un coup d'avance ; **ou** niveau à geste unique → axe coups non discriminant → ⭐2 congruente à ⭐1 (voir C-1) |
+| ⭐3 | `used === env.minMoves` | save + solveur | A13 §2/§6 — « efficacité proche de l'optimum » : joué aussi vite que la solution minimale certifiée |
 
-**Propriétés exigées** :
+**Correction v1.1 (gouvernance)** : la définition initiale (`⭐2 = bestMovesLeft ≥ 1`) rendait ⭐2 mathématiquement inatteignable sur les niveaux à `maxMoves = 1` (la victoire consomme le seul coup) tout en y accordant ⭐3 — des étoiles **hors d'ordre**. La clause de congruence ci-dessus corrige ce défaut : sur ces niveaux, l'enveloppe ne discrimine pas (toutes les victoires certifiées ont le même profil), donc ⭐1 = ⭐2 = ⭐3 à la première victoire. Ce n'est pas une largesse : c'est la conséquence directe de D-P1 — « jamais plus haut que l'atteignable certifié ». W1 est pédagogiquement un tutoriel ; le gradient d'étoiles existe dès que `maxMoves > minMoves` (N4 : maxMoves=3, minMoves=2).
+
+**Propriétés exigées (testées sur l'intégralité du LADDER)** :
+- **P-ordre** : ⭐3 ⇒ ⭐2 ⇒ ⭐1 — aucun état de save ne peut produire ⭐3 sans ⭐2 ;
+- **P-congruence** : sur tout niveau à `minMoves === maxMoves`, une victoire accorde les trois étoiles (conséquence de C-1/D-P1) ;
 - **Pures** : `starsOf(rec, L, env) → {1,2,3}` — même entrée → mêmes étoiles, aucune horloge, aucun aléa ;
-- **Monotones** : une étoile acquise ne peut pas être perdue (bestMovesLeft ne décroît pas — garantie de `markCompleted`) ;
-- **Déterministes** via l'enveloppe : `env` est memoïsée par niveau, calculée par le solveur réel, jamais estimée ;
-- **Limitation documentée** : l'enveloppe couvre les chemins gagnants minimaux (`samplePaths` du solveur). Le seuil ⭐3 est un *plancher d'optimalité* (atteindre `minMoves`), pas un plafond de score — choix assumé, plus robuste que la comparaison de score (le score b1 dépend du chaînage, futur M18.x).
+- **Monotones** : une étoile acquise ne peut pas être perdue (`bestMovesLeft` ne décroît pas — garantie de `markCompleted`) ;
+- **Dégradées proprement** : si `env` est absente (niveau insolvable au budget solveur — ne devrait pas exister dans le LADDER), ⭐3 devient inaccordable mais ⭐1/⭐2 restent calculables — jamais de crash, jamais d'étoile inventée (I-5).
+- **Limitation documentée** : le seuil ⭐3 est un *plancher d'optimalité* (atteindre `minMoves`), pas un plafond de score — choix assumé, plus robuste que la comparaison de score (le score b1 dépend du chaînage, futur M18.x).
 
 ## 4. La Saga (vue unifiée, en lecture seule)
 
@@ -57,7 +66,8 @@ knowledge ───────┘        │
 ```
 
 - La Saga **n'écrit rien** : elle est fonction de (save, knowledge, LADDER, enveloppes) ;
-- Les seuils de chapitre sont des constantes déclarées dans le module de projection (config de game design, pas de logique moteur) ;
+- **Le lab V5 est exclu du système d'étoiles** (renforcement v1.1) : un atelier ne se « gagne » pas — la Saga l'affiche hors hiérarchie (rubrique distincte, aucune étoile, aucun seuil), cohérent avec la seam v5 (`outcome` unique, jamais de défaite) et avec l'absence de champ de progression côté lab. L'étoile lab (si un jour désirée) serait une décision M18.x avec sa propre définition dérivée ;
+- Les seuils de chapitre sont **dérivés, pas inventés** (renforcement v1.1) : le seuil d'un chapitre = ⭐ requises = `min(6, 2 × nombreDeNiveauxDuChapitre)` — un joueur qui termine tout au ⭐1 ouvre le chapitre suivant ; le ⭐3 parfait n'est jamais requis pour avancer (A13 : « seuils énoncés, visibles dans l'UI, jamais bloquants au-delà de la complétion »). Constantes déclarées dans le module de projection (config de game design), pas de logique moteur ;
 - La maîtrise par opérateur (A13 §3 : `opUtilization`…) est **hors périmètre v1** — la donnée n'est pas persistée aujourd'hui ; ouverte en M18.x si la télémétrie A16 la persiste un jour.
 
 ## 5. Livrables M18
@@ -83,8 +93,8 @@ knowledge ───────┘        │
 
 | Gate | Contenu | Niveau exigé |
 |---|---|---|
-| G18-01 | Projection pure + propriétés §3 testées | E3 |
-| G18-02 | Intégration save réelle + solveur réel (N1..N5 au minimum) | E4 |
+| G18-01 | Projection pure + propriétés §3 testées **dont P-ordre et P-congruence sur l'intégralité du LADDER (N1..N41)** | E3 |
+| G18-02 | Intégration save réelle + solveur réel (N1..N5 au minimum — **N1..N3 obligatoirement** : les niveaux à geste unique qui ont révélé le défaut ⭐2) | E4 |
 | G18-03 | Suite intégrale verte, 0 régression (≥ 442 tests) | E4 |
 | G18-04 | Vue Saga jouable dans le build réel | E2→E4 |
 | G18-05 | **Preuve E6** : boucle jouer → étoiles → rejouer mieux → étoiles → reload (0 erreur console) | **E6 — obligatoire** |
