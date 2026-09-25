@@ -22,16 +22,24 @@
 //   - Déterminisme: F(E)=F(E), indépendant de l'ordre d'évaluation et du reload.
 //   - Aucun hasard, aucune horloge, aucun réseau, aucun LLM, aucune monnaie.
 //   - Storage corrompu → fallback sûr, jamais un blocage d'Atelier.
+//
+// Extension (seam M16 — Symbiote des Gardiens) :
+//   createKnowledgeStore(backend, { extraFragments, extraRules }) permet
+//   d'ENRICHIR le catalogue sans toucher aux 5 Fragments de base ni à leur
+//   comportement : toutes les fonctions de base gardent leur signature et leur
+//   sémantique (le contexte par défaut reste le catalogue M15). Les ids
+//   additionnels sont reconnus par le décodage de ce STORE uniquement ; un
+//   fragment inconnu reste, selon contrat, ignoré partout ailleurs.
 // ============================================================================
 
 export const KNOWLEDGE_SCHEMA_VERSION = 1;
 const STORAGE_KEY = "mathic.knowledge.v1";
 
 // ---------------------------------------------------------------------------
-// Catalogue — contenu STATIQUE, versionné, LORE=SÉPARÉ du FACT.
+// Catalogue de base — contenu STATIQUE, versionné, LORE=SÉPARÉ du FACT.
 // ---------------------------------------------------------------------------
 
-const CATALOG = [
+const BASE_CATALOG = [
   {
     id: "LORE_ATELIER_001",
     title: "L'Atelier Astral",
@@ -74,37 +82,8 @@ const CATALOG = [
   },
 ];
 
-const CATALOG_INDEX = new Map(CATALOG.map((f, i) => [f.id, i]));
-const CATALOG_BY_ID = new Map(CATALOG.map((f) => [f.id, f]));
-
-export function getFragment(id) {
-  const f = CATALOG_BY_ID.get(id);
-  return f ? { ...f } : null;
-}
-
-export function listFragments() {
-  return CATALOG.map((f) => ({ ...f }));
-}
-
 // ---------------------------------------------------------------------------
-// État de connaissance (KnowledgeState) — séparé de la Progression.
-// ---------------------------------------------------------------------------
-
-export const emptyKnowledgeState = () => ({
-  schemaVersion: KNOWLEDGE_SCHEMA_VERSION,
-  unlockedFragments: [],
-});
-
-// Classement par ordre du catalogue (déterminisme d'affichage).
-function sortByCatalog(ids) {
-  return [...ids].sort((a, b) => (CATALOG_INDEX.get(a) ?? 1e9) - (CATALOG_INDEX.get(b) ?? 1e9));
-}
-
-// ---------------------------------------------------------------------------
-// Règles de déverrouillage — ÉVALUATION PURE (aucune mutation implicite).
-// evidence : { sequence: [obs, ...] } — obs réels, chronologiques.
-//   CHALLENGE_COMPLETED · REWIND_USED · UNDO_USED · OCULUS_STATE_ANALYZED ·
-//   OCULUS_ACTION_ANALYZED · OCULUS_REJECTION_OBSERVED · SEAL_CREATED
+// Règles de déverrouillage de base — prédicats sur la séquence d'évidences.
 // ---------------------------------------------------------------------------
 
 function has(seq, t) {
@@ -120,30 +99,78 @@ function before(seq, t1, t2) {
   return false;
 }
 
-export function evaluateFragmentUnlocks(evidence) {
+function ruleAtelier(seq) { return has(seq, "CHALLENGE_COMPLETED"); }
+function ruleChronos(seq) { return has(seq, "REWIND_USED"); }
+function ruleValidateur(seq) { return has(seq, "OCULUS_ACTION_ANALYZED"); }
+function ruleMageek(seq) { return before(seq, "OCULUS_REJECTION_OBSERVED", "CHALLENGE_COMPLETED"); }
+function ruleAljabr(seq) { return before(seq, "SEAL_CREATED", "CHALLENGE_COMPLETED"); }
+
+const BASE_RULES = {
+  LORE_ATELIER_001: ruleAtelier,
+  LORE_CHRONOS_001: ruleChronos,
+  LORE_ENGINE_FAILFAST_001: ruleValidateur,
+  LORE_MAGEEK_001: ruleMageek,
+  LORE_ALJABR_001: ruleAljabr,
+};
+
+// ---------------------------------------------------------------------------
+// Contexte : catalogue (ordre = déterminisme d'affichage) + règles.
+// ---------------------------------------------------------------------------
+
+const defaultCtx = () => ({ catalog: BASE_CATALOG, rules: BASE_RULES });
+
+export function getFragment(id) {
+  const f = BASE_CATALOG.find((x) => x.id === id);
+  return f ? { ...f } : null;
+}
+
+export function listFragments() {
+  return BASE_CATALOG.map((f) => ({ ...f }));
+}
+
+// ---------------------------------------------------------------------------
+// État de connaissance (KnowledgeState) — séparé de la Progression.
+// ---------------------------------------------------------------------------
+
+export const emptyKnowledgeState = () => ({
+  schemaVersion: KNOWLEDGE_SCHEMA_VERSION,
+  unlockedFragments: [],
+});
+
+// Classement par ordre du contexte (ids inconnus en fin de liste, ordre stable).
+function sortByCatalog(ids, ctx) {
+  const idx = new Map(ctx.catalog.map((f, i) => [f.id, i]));
+  return [...ids].sort((a, b) => (idx.get(a) ?? 1e9) - (idx.get(b) ?? 1e9));
+}
+
+// ---------------------------------------------------------------------------
+// Règles de déverrouillage — ÉVALUATION PURE (aucune mutation implicite).
+// evidence : { sequence: [obs, ...] } — obs réels, chronologiques.
+//   CHALLENGE_COMPLETED · REWIND_USED · UNDO_USED · OCULUS_STATE_ANALYZED ·
+//   OCULUS_ACTION_ANALYZED · OCULUS_REJECTION_OBSERVED · SEAL_CREATED ·
+//   (extension M16) SYMBIOTE_AWAKENED · SYMBIOTE_COMPOSED
+// ---------------------------------------------------------------------------
+
+export function evaluateFragmentUnlocks(evidence, inputCtx = defaultCtx()) {
+  const ctx = inputCtx && Array.isArray(inputCtx.catalog) ? inputCtx : defaultCtx();
   const seq = Array.isArray(evidence?.sequence) ? evidence.sequence : [];
   const unlocked = [];
-  const wants = (id, ok) => {
-    if (ok && !unlocked.includes(id)) unlocked.push(id);
-  };
-
-  wants("LORE_ATELIER_001", has(seq, "CHALLENGE_COMPLETED"));
-  wants("LORE_CHRONOS_001", has(seq, "REWIND_USED"));
-  wants("LORE_ENGINE_FAILFAST_001", has(seq, "OCULUS_ACTION_ANALYZED"));
-  wants("LORE_MAGEEK_001", before(seq, "OCULUS_REJECTION_OBSERVED", "CHALLENGE_COMPLETED"));
-  wants("LORE_ALJABR_001", before(seq, "SEAL_CREATED", "CHALLENGE_COMPLETED"));
-
-  return sortByCatalog(unlocked);
+  for (const f of ctx.catalog) {
+    const rule = ctx.rules?.[f.id];
+    if (typeof rule === "function" && rule(seq) && !unlocked.includes(f.id)) unlocked.push(f.id);
+  }
+  return sortByCatalog(unlocked, ctx);
 }
 
 // Apply : UNION monotone + idempotente. Retourne le NOUVEL état et les
 // fragments réellement ajoutés (vide si NO_OP). Aucune mutation de l'entrée.
-export function applyUnlocks(state, evidence) {
-  const current = new Set(sanitize(state).unlockedFragments);
-  const candidates = evaluateFragmentUnlocks(evidence);
+export function applyUnlocks(state, evidence, inputCtx = defaultCtx()) {
+  const ctx = inputCtx && Array.isArray(inputCtx.catalog) ? inputCtx : defaultCtx();
+  const current = new Set(sanitize(state, ctx).unlockedFragments);
+  const candidates = evaluateFragmentUnlocks(evidence, ctx);
   const newly = [];
   for (const id of candidates) if (!current.has(id)) newly.push(id);
-  const merged = sortByCatalog([...current, ...newly]);
+  const merged = sortByCatalog([...current, ...newly], ctx);
   return {
     state: { schemaVersion: KNOWLEDGE_SCHEMA_VERSION, unlockedFragments: merged },
     newlyUnlocked: newly,
@@ -151,22 +178,25 @@ export function applyUnlocks(state, evidence) {
   };
 }
 
-function sanitize(state) {
-  return decodeKnowledgeState(state).state;
+function sanitize(state, ctx) {
+  return decodeKnowledgeState(state, ctx).state;
 }
 
 // ---------------------------------------------------------------------------
 // Persistance — sérialisation déterministe (ids triés) + fail-safe.
 // ---------------------------------------------------------------------------
 
-export function encodeKnowledgeState(state) {
-  const s = sanitize(state);
-  return JSON.stringify({ schemaVersion: s.schemaVersion, unlockedFragments: sortByCatalog(s.unlockedFragments) });
+export function encodeKnowledgeState(state, inputCtx = defaultCtx()) {
+  const ctx = inputCtx && Array.isArray(inputCtx.catalog) ? inputCtx : defaultCtx();
+  const s = sanitize(state, ctx);
+  return JSON.stringify({ schemaVersion: s.schemaVersion, unlockedFragments: sortByCatalog(s.unlockedFragments, ctx) });
 }
 
 // decodeKnowledgeState : jamais de throw. Raw peut être une chaîne JSON ou un
 // objet. Toute corruption → état vide valide + raison (le jeu continue).
-export function decodeKnowledgeState(raw) {
+export function decodeKnowledgeState(raw, inputCtx = defaultCtx()) {
+  const ctx = inputCtx && Array.isArray(inputCtx.catalog) ? inputCtx : defaultCtx();
+  const known = new Set(ctx.catalog.map((f) => f.id));
   let obj = raw;
   if (typeof raw === "string") {
     if (raw.trim() === "") return { state: emptyKnowledgeState(), reason: "ok" };
@@ -181,21 +211,30 @@ export function decodeKnowledgeState(raw) {
     return { state: emptyKnowledgeState(), reason: "unknown-schema-version" };
   }
   if (!Array.isArray(obj.unlockedFragments)) return { state: emptyKnowledgeState(), reason: "missing-field" };
-  const known = [];
+  const kept = [];
   for (const id of obj.unlockedFragments) {
-    // fragment inconnu → ignoré (jamais de blocage, jamais d'invention)
-    if (typeof id === "string" && CATALOG_BY_ID.has(id) && !known.includes(id)) known.push(id);
+    // fragment inconnu du CONTEXTE → ignoré (jamais de blocage, jamais d'invention)
+    if (typeof id === "string" && known.has(id) && !kept.includes(id)) kept.push(id);
   }
-  return { state: { schemaVersion: KNOWLEDGE_SCHEMA_VERSION, unlockedFragments: sortByCatalog(known) }, reason: "ok" };
+  return { state: { schemaVersion: KNOWLEDGE_SCHEMA_VERSION, unlockedFragments: sortByCatalog(kept, ctx) }, reason: "ok" };
 }
 
 // ---------------------------------------------------------------------------
 // Stockage — backend injecté (persistance Web Storage injectée par l'UI, mémoire
 // en test). Le backend peut échouer : l'Atelier continue (fallback mémoire).
-//   "persistent" | "memory" | "disabled" (stockage indisponible ET mémoire bloquée)
+// Contexte enrichissable (extraFragments/extraRules) — seam M16, non cassante.
 // ---------------------------------------------------------------------------
 
-export function createKnowledgeStore(backend) {
+export function createKnowledgeStore(backend, opts = {}) {
+  const extra = (opts && Array.isArray(opts.extraFragments) ? opts.extraFragments : []).filter(
+    (f) => f && typeof f.id === "string" && !BASE_CATALOG.some((b) => b.id === f.id)
+  );
+  const extraRules = (opts && opts.extraRules && typeof opts.extraRules === "object" ? opts.extraRules : {});
+  const ctx = {
+    catalog: [...BASE_CATALOG, ...extra],
+    rules: { ...BASE_RULES, ...extraRules },
+  };
+
   const memory = new Map();
   let backendOk = true;
   try {
@@ -226,9 +265,7 @@ export function createKnowledgeStore(backend) {
 
   const loadState = async () => {
     const raw = await read();
-    // raw peut être un objet si le backend « mémoire » a reçu un stock qui
-    // a lui-même persisté des objets ; on gère l'un et l'autre.
-    const { state } = decodeKnowledgeState(raw);
+    const { state } = decodeKnowledgeState(raw, ctx);
     return state;
   };
 
@@ -239,19 +276,29 @@ export function createKnowledgeStore(backend) {
     get key() {
       return STORAGE_KEY;
     },
+    get catalog() {
+      return ctx.catalog.map((f) => ({ ...f }));
+    },
+    getFragment(id) {
+      const f = ctx.catalog.find((x) => x.id === id);
+      return f ? { ...f } : null;
+    },
+    listFragments() {
+      return ctx.catalog.map((f) => ({ ...f }));
+    },
     async load() {
       return loadState();
     },
     async record(obs) {
       const state = await loadState();
-      const { state: next, newlyUnlocked, noop } = applyUnlocks(state, { sequence: [obs] });
-      if (!noop) await write(encodeKnowledgeState(next));
+      const { state: next, newlyUnlocked, noop } = applyUnlocks(state, { sequence: [obs] }, ctx);
+      if (!noop) await write(encodeKnowledgeState(next, ctx));
       return { state: next, newlyUnlocked, noop };
     },
     async recordAll(evidence) {
       const state = await loadState();
-      const { state: next, newlyUnlocked, noop } = applyUnlocks(state, evidence);
-      if (!noop) await write(encodeKnowledgeState(next));
+      const { state: next, newlyUnlocked, noop } = applyUnlocks(state, evidence, ctx);
+      if (!noop) await write(encodeKnowledgeState(next, ctx));
       return { state: next, newlyUnlocked, noop };
     },
   };
