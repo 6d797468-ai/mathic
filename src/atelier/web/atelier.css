@@ -502,3 +502,133 @@ button.icon {
   margin-top: 4px;
   line-height: 1.5;
 }
+
+/* ── Symbiote des Gardiens (M16) — Guardian Composition Layer ────────── */
+
+.badge-lab {
+  display: inline-block;
+  font-size: 10px;
+  font-family: var(--mono);
+  background: rgba(139, 92, 246, 0.2);
+  color: var(--violet);
+  border: 1px solid var(--violet);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.8px;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.guardians-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.guardian-card {
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  user-select: none;
+}
+
+.guardian-card:hover {
+  border-color: var(--gold-soft);
+}
+
+.guardian-card.active {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(255, 176, 58, 0.12), rgba(139, 92, 246, 0.08));
+}
+
+.guardian-card .g-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.guardian-card .g-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.guardian-card.active .g-name {
+  color: var(--gold);
+}
+
+.guardian-card .g-op {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--op);
+  background: var(--line-soft);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.guardian-card .g-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.symbiote-resonance {
+  background: var(--line-soft);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.symbiote-resonance .resonance-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resonance-state {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--violet);
+  letter-spacing: 0.5px;
+}
+
+.resonance-state[data-state="AWAKENED"] {
+  color: var(--num);
+}
+
+.resonance-state[data-state="BOUND"] {
+  color: var(--gold);
+}
+
+.resonance-state[data-state="RESONANT"] {
+  color: var(--res);
+}
+
+.resonance-state[data-state="MASTERED"] {
+  color: #f43f5e;
+}
+
+.resonance-desc {
+  color: var(--text);
+  font-size: 12px;
+}
+
+#symbiote-out.ok {
+  color: var(--res);
+}
+
+#symbiote-out.err {
+  color: var(--warn);
+}

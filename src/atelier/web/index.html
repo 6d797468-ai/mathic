@@ -31,6 +31,23 @@
         <p id="status" class="status" aria-live="polite"></p>
       </section>
 
+      <section class="panel" id="symbiote">
+        <h2>⚚ Symbiote des Gardiens <span class="badge-lab">LAB</span></h2>
+        <p class="hint">« Compose les lois des Gardiens sur une même pierre. Aucune ne cède — elles s'accordent en rendant chaque ligne vraie. »</p>
+        <div class="guardians-grid" id="guardians-grid"></div>
+        <div class="symbiote-resonance mono" id="symbiote-resonance">
+          <div class="resonance-head">
+            <span class="legend">RÉSONANCE DU SYMBIOTE</span>
+            <span class="resonance-state" id="resonance-state" data-state="DORMANT">DORMANT</span>
+          </div>
+          <span class="resonance-desc" id="resonance-desc">Sélectionne un ou plusieurs Gardiens.</span>
+        </div>
+        <div class="row">
+          <button id="btn-symbiote-compose" type="button" disabled>⚚ Lier les Sceaux &amp; Forger le Défi</button>
+        </div>
+        <p id="symbiote-out" class="status mono" aria-live="polite"></p>
+      </section>
+
       <section class="panel" id="sablier" data-mode="present">
         <h2>⌛ Sablier de Chronos</h2>
         <p class="hint">« Remonte le temps. Observe ton erreur. Trouve l'instant où ton raisonnement a bifurqué. »</p>

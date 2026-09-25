@@ -21,6 +21,17 @@ import {
   getFragment,
   listFragments,
 } from "../knowledge.mjs";
+import {
+  GUARDIANS,
+  GUARDIAN_IDS,
+  symbioteSpec,
+  validateSymbiote,
+  createSymbioteSession,
+  evaluateSymbiosis,
+  guardianFragments,
+  guardianRules,
+  SYMBIOTE_BASES,
+} from "../symbiote.mjs";
 
 const PRESETS = {
   SUM2X2: {
@@ -99,7 +110,79 @@ const els = {
   // Marges de Maggeek
   fragments: $("fragments"),
   margesNote: $("marges-note"),
+  // Symbiote des Gardiens
+  guardiansGrid: $("guardians-grid"),
+  resonanceState: $("resonance-state"),
+  resonanceDesc: $("resonance-desc"),
+  btnSymbioteCompose: $("btn-symbiote-compose"),
+  symbioteOut: $("symbiote-out"),
 };
+
+// ---- Symbiote des Gardiens (M16) -------------------------------------------
+
+let selectedGuardians = new Set();
+
+function renderGuardiansGrid() {
+  els.guardiansGrid.innerHTML = "";
+  for (const id of GUARDIAN_IDS) {
+    const g = GUARDIANS[id];
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "guardian-card" + (selectedGuardians.has(id) ? " active" : "");
+    card.innerHTML = `
+      <div class="g-head">
+        <span class="g-name">${g.title}</span>
+        <span class="g-op">${g.op}</span>
+      </div>
+      <p class="g-desc">${g.element}</p>
+    `;
+    card.addEventListener("click", () => {
+      if (selectedGuardians.has(id)) selectedGuardians.delete(id);
+      else selectedGuardians.add(id);
+      if (selectedGuardians.size === 1 && !sessionSeq.some((o) => o.t === "SYMBIOTE_AWAKENED")) {
+        observe({ t: "SYMBIOTE_AWAKENED" });
+      }
+      renderGuardiansGrid();
+      updateResonance();
+    });
+    els.guardiansGrid.appendChild(card);
+  }
+}
+
+function updateResonance() {
+  const gList = [...selectedGuardians];
+  const { state } = evaluateSymbiosis({ sequence: sessionSeq });
+  els.resonanceState.textContent = state;
+  els.resonanceState.dataset.state = state;
+
+  const len = gList.length;
+  if (len === 0) {
+    els.resonanceDesc.textContent = "Sélectionne un ou plusieurs Gardiens.";
+    els.btnSymbioteCompose.disabled = true;
+  } else {
+    els.resonanceDesc.textContent = `${len} Gardien${len > 1 ? "s" : ""} sélectionné${len > 1 ? "s" : ""}.`;
+    els.btnSymbioteCompose.disabled = false;
+  }
+}
+
+els.btnSymbioteCompose.addEventListener("click", () => {
+  const gList = [...selectedGuardians];
+  const spec = symbioteSpec(gList, SYMBIOTE_BASES[0].spec);
+  const v = validateSymbiote(spec);
+  if (!v.ok) {
+    els.symbioteOut.textContent = `Composition rejetée : ${v.reasons[0]}`;
+    els.symbioteOut.className = "status mono err";
+    return;
+  }
+  observe({ t: "SYMBIOTE_COMPOSED", guardians: gList });
+  initCtrl(v.spec, `Symbiote : ${gList.join(" + ")}`);
+  els.symbioteOut.textContent = "Défi Symbiote forgé. La pierre résonne.";
+  els.symbioteOut.className = "status mono ok";
+  document.getElementById("board").scrollIntoView({ behavior: "smooth" });
+});
+
+renderGuardiansGrid();
+updateResonance();
 
 // ---- Mémoire pédagogique (M15) — Fragments de Savoir ----------------------
 // L'observation (Verified Event) → évaluation pure → union monotone → persistance.
@@ -125,7 +208,11 @@ const storageBackend = (() => {
     return null; // storage indisponible → fallback mémoire (KNOW-18)
   }
 })();
-knowledge = createKnowledgeStore(storageBackend);
+
+knowledge = createKnowledgeStore(storageBackend, {
+  extraFragments: guardianFragments(),
+  extraRules: guardianRules(),
+});
 
 let unlockedIds = [];
 let sessionSeq = []; // évidence réelle de la session, chronologique
@@ -138,7 +225,7 @@ async function observe(o) {
     unlockedIds = state.unlockedFragments;
     renderMarges();
     if (newlyUnlocked.length) {
-      const f = getFragment(newlyUnlocked[0]);
+      const f = knowledge.getFragment(newlyUnlocked[0]);
       setStatus(`Fragment débloqué : « ${f.title} »`, "ok");
     }
   } catch {
@@ -150,7 +237,7 @@ function renderMarges() {
   if (!els.fragments) return;
   const unlocked = new Set(unlockedIds);
   els.fragments.innerHTML = "";
-  for (const f of listFragments()) {
+  for (const f of knowledge.listFragments()) {
     const li = document.createElement("li");
     li.className = "frag" + (unlocked.has(f.id) ? " on" : " off");
     if (unlocked.has(f.id)) {
@@ -175,7 +262,7 @@ function renderMarges() {
   }
   if (els.margesNote) {
     els.margesNote.textContent = knowledge
-      ? `${unlockedIds.length}/${listFragments().length} fragments · mémoire ${knowledge.mode}`
+      ? `${unlockedIds.length}/${knowledge.listFragments().length} fragments · mémoire ${knowledge.mode}`
       : "mémoire indisponible — l'Atelier continue.";
   }
 }
