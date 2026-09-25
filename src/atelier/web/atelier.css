@@ -340,3 +340,113 @@ body.rewound .board {
 body.rewound .status.rewound {
   color: var(--gold);
 }
+
+/* ── Oculus d'Analyse (UI uniquement — données du replay réel, aucune refonte) ─ */
+
+.oculus-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(5, 8, 16, 0.82);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.oculus-card {
+  width: 100%;
+  max-width: 460px;
+  max-height: 84vh;
+  overflow: auto;
+  border-color: var(--violet);
+}
+
+.oculus-card h2 {
+  color: var(--violet);
+}
+
+.oculus-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+button.icon {
+  background: none;
+  color: var(--muted);
+  border: none;
+  font-size: 18px;
+  padding: 0;
+}
+
+.oculus-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.oc-cursor,
+.oc-note,
+.oc-event,
+.oc-fact {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.oc-result {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.oc-result.ok {
+  color: var(--res);
+}
+
+.oc-result.err {
+  color: var(--warn);
+}
+
+.oc-result.warn {
+  color: var(--gold);
+}
+
+.oc-lines {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--chip);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: var(--mono);
+}
+
+.oc-lines li b {
+  color: var(--gold);
+}
+
+/* Valeurs « écartées par la loi » : le moteur ne les offre pas à cette case.
+   Clic = analyse (jamais de coup : aucune mutation possible depuis une case). */
+.obs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.cellbtn.obs {
+  background: var(--line-soft);
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  font-size: 11px;
+  padding: 2px 5px;
+  border-radius: 6px;
+  min-width: 26px;
+  height: 22px;
+}

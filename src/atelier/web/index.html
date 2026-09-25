@@ -45,7 +45,21 @@
         </div>
         <p class="readout mono">Coup <b id="cursor-pos">0</b> / <b id="cursor-total">0</b></p>
         <p id="replay-status" class="status mono" aria-live="polite"></p>
+        <div class="row">
+          <button id="btn-oculus" type="button" class="secondary">◉ OCULUS — Analyser l'état</button>
+        </div>
       </section>
+
+      <div id="oculus" class="oculus-modal" hidden>
+        <div class="oculus-card panel">
+          <div class="oculus-head">
+            <h2>◉ Oculus d'Analyse</h2>
+            <button id="btn-oculus-close" type="button" class="icon" aria-label="Fermer">✕</button>
+          </div>
+          <div id="oculus-body" class="oculus-body"></div>
+          <button id="btn-oculus-close2" type="button" class="secondary">[ FERMER ]</button>
+        </div>
+      </div>
 
       <section class="panel">
         <h2>2 · Frapper le Sceau</h2>

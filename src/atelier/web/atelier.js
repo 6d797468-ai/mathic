@@ -8,6 +8,13 @@
 // ============================================================================
 
 import { createReplayController } from "../replay-controller.mjs";
+import {
+  createOculusController,
+  analyzeState,
+  analyzeAction,
+  reserveValuesAt,
+  present,
+} from "../oculus-controller.mjs";
 import { encodeSeal, decodeSeal, verifySeal } from "../seal.mjs";
 
 const PRESETS = {
@@ -78,6 +85,12 @@ const els = {
   cursorTotal: $("cursor-total"),
   curve: $("curve"),
   replayStatus: $("replay-status"),
+  // Oculus d'Analyse
+  btnOculus: $("btn-oculus"),
+  oculus: $("oculus"),
+  oculusBody: $("oculus-body"),
+  btnOculusClose: $("btn-oculus-close"),
+  btnOculusClose2: $("btn-oculus-close2"),
 };
 
 let ctrl = null;          // ReplayController — le présent est le curseur
@@ -95,20 +108,32 @@ function renderBoard() {
   const rows = board.length;
   const cols = board[0].length;
   const movesAt = ctrl.getCommands();            // commandes valides au curseur
+  const reserveVals = reserveValuesAt(state).map(Number); // valeurs réelles restantes
 
   let gridHtml = "";
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const val = board[r][c];
-      const opts = val === null ? movesAt.filter((m) => m.r === r && m.c === c) : [];
+      const offered = movesAt.filter((m) => m.r === r && m.c === c);
+      const offeredVals = new Set(offered.map((o) => o.value));
+      const obstacles = reserveVals.filter((v) => !offeredVals.has(v));
       if (val !== null) {
         gridHtml += `<div class="cell fill">${val}</div>`;
-      } else if (opts.length) {
-        gridHtml += `<div class="cell empty"><span class="opts">${opts
-          .map((o) => `<button class="cellbtn" data-v="${o.value}" data-r="${r}" data-c="${c}">${o.value}</button>`)
-          .join("")}</span></div>`;
       } else {
-        gridHtml += `<div class="cell empty">–</div>`;
+        gridHtml += `<div class="cell empty">`;
+        if (offered.length) {
+          gridHtml += `<span class="opts">${offered
+            .map((o) => `<button class="cellbtn ok" data-v="${o.value}" data-r="${r}" data-c="${c}">${o.value}</button>`)
+            .join("")}</span>`;
+        } else {
+          gridHtml += `–`;
+        }
+        if (obstacles.length) {
+          gridHtml += `<span class="obs">${obstacles
+            .map((v) => `<button class="cellbtn obs" data-v="${v}" data-r="${r}" data-c="${c}" title="le moteur n'offre pas cette valeur ici">${v}✕</button>`)
+            .join("")}</span>`;
+        }
+        gridHtml += `</div>`;
       }
     }
   }
@@ -130,11 +155,16 @@ function renderBoard() {
     ? "Anomalie stabilisée. Frappe le Sceau pour l'éterniser."
     : currentLabel;
 
-  for (const btn of els.board.querySelectorAll(".cellbtn")) {
+  // coups OFFERTS par la loi → place() ; valeurs ÉCARTÉES → analyse Oculus.
+  for (const btn of els.board.querySelectorAll(".cellbtn.ok")) {
     btn.addEventListener("click", () => place(btn.dataset));
+  }
+  for (const btn of els.board.querySelectorAll(".cellbtn.obs")) {
+    btn.addEventListener("click", () => oculusAttempt(btn.dataset));
   }
 
   renderSablier();
+  if (ctrl && !els.oculus.hidden) renderOculusState(); // analyse rattachée au curseur affiché
 }
 
 function setStatus(text, tone = "") {
@@ -225,6 +255,73 @@ els.btnUndo.addEventListener("click", () => {
     setStatus("Rien à annuler.", "err");
   }
 });
+
+// ---- Oculus d'Analyse -------------------------------------------------------
+//  Analyse ATTACHÉE au curseur du Sablier : S_k = replay(spec, E[1..k]).
+//  Les causes exposées ne viennent que des faits du moteur (apply/getMoves/
+//  validateSpec/quickReject). Aucune mutation : l'Oculus observe, jamais il ne
+//  joue, jamais il ne recule, jamais il n'écrit.
+
+const escapeHtml = (s) =>
+  String(s ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+
+function fmtLine(l) {
+  const cells = l.cells.map((c) => (c === -1 ? "·" : c)).join(" ");
+  const ops = l.ops.join(" ");
+  return `${l.kind === "row" ? "L" : "C"}${l.idx + 1}  ${cells}  [${ops}]  = ${l.target}`;
+}
+
+function oculusOpen() {
+  els.oculus.hidden = false;
+}
+function oculusClose() {
+  els.oculus.hidden = true;
+}
+
+function renderOculusState() {
+  if (!ctrl) return;
+  const a = analyzeState(ctrl.spec, ctrl.trace, ctrl.position);
+  const p = present(a);
+  const lines = a.lines.rows.concat(a.lines.cols);
+  let html = `
+    <p class="oc-cursor mono">Coup <b>${a.cursor}</b> / ${a.total} · ${a.atPresent ? "PRÉSENT" : "HISTORIQUE"}</p>
+    <p class="oc-result ${p.tone}">${escapeHtml(p.title)}${a.solved ? " ✦" : ""}</p>
+    <ul class="oc-lines">${lines.map((l) => `<li>${escapeHtml(fmtLine(l))}</li>`).join("")}</ul>
+    <p class="oc-note mono">Moteur : ${a.offeredMoves.length} coups offerts · additivité ${escapeHtml(a.specNote)}</p>`;
+  if (!a.atPresent && a.lastEvent) {
+    html += `<p class="oc-event mono">Dernier coup : PLACE ${a.lastEvent.value} @ (${a.lastEvent.r},${a.lastEvent.c})</p>`;
+  }
+  els.oculusBody.innerHTML = html;
+  oculusOpen();
+}
+
+function oculusAttempt({ v, r, c }) {
+  if (!ctrl) return;
+  const a = analyzeAction(ctrl.spec, ctrl.trace, ctrl.position, { value: +v, r: +r, c: +c });
+  const p = present(a);
+  const st = analyzeState(ctrl.spec, ctrl.trace, a.cursor);
+  const lines = st.lines.rows.concat(st.lines.cols);
+  let html = `
+    <p class="oc-cursor mono">Coup <b>${a.cursor}</b> / ${a.total} · Commande : PLACE ${a.command.value} @ (${a.command.r},${a.command.c})</p>
+    <p class="oc-result ${p.tone}">${escapeHtml(p.title)}</p>`;
+  if (p.body) html += `<p class="oc-fact mono">Cause : ${escapeHtml(p.body)}</p>`;
+  for (const cell of a.affectedCells) {
+    html += `<p class="oc-fact mono">Cellule (${cell.r},${cell.c}) — ${escapeHtml(String(cell.role))}${cell.content !== null ? ` : ${escapeHtml(String(cell.content))}` : ""}</p>`;
+  }
+  for (const v0 of a.affectedValues) {
+    html += `<p class="oc-fact mono">Valeur ${v0.value} — ${escapeHtml(String(v0.role))}${v0.qty !== undefined ? ` : ${v0.qty} restant${v0.qty > 1 ? "s" : ""}` : ""}</p>`;
+  }
+  if (a.valid) {
+    html += `<p class="oc-note mono">Transition réelle du moteur : ${escapeHtml(JSON.stringify(a.stateAfter.grid))}</p>`;
+  }
+  html += `<ul class="oc-lines">${lines.map((l) => `<li>${escapeHtml(fmtLine(l))}</li>`).join("")}</ul>`;
+  els.oculusBody.innerHTML = html;
+  oculusOpen();
+}
+
+els.btnOculus.addEventListener("click", renderOculusState);
+els.btnOculusClose.addEventListener("click", oculusClose);
+els.btnOculusClose2.addEventListener("click", oculusClose);
 
 // ---- Initialisation ---------------------------------------------------------
 
