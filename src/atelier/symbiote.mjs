@@ -74,12 +74,19 @@ function guardianLineOps(baseSpec, guardians) {
 // ---------------------------------------------------------------------------
 // Backtracking CANONIQUE d'un remplissage : tous les livrôts (pleinement
 // peuplées) doivent se réduire proprement avec leur ops assignée. Déterministe :
-// cases ligne-major, valeurs croissantes, budget fixe. Pur (fonction des entrées).
-// Retourne { grid, targets }, ou null si aucune solution n'a été trouvée DANS
-// LE BUDGET : null signifie « infaisable sous budget (FILL_BUDGET) » — ce n'est
-// PAS une preuve mathématique d'infaisabilité. Sémantique tri-état
-// (SOLVED / UNSOLVABLE_PROVEN / SEARCH_BUDGET_EXCEEDED) prévue en M16.x.
+// cases ligne-major, valeurs croissantes, budget fixe. Pur (fonction des entrées).// SÉMANTIQUE TRI-ÉTAT (M16.x) — le résultat distingue trois issues :
+//   SOLVED                 → un remplissage canonique a été trouvé ;
+//   UNSOLVABLE_PROVEN      → l'arbre de recherche a été ENTIÈREMENT épuisé :
+//                            aucune assignment ne satisfait les lois — preuve
+//                            mathématique d'infaisabilité (déterministe) ;
+//   SEARCH_BUDGET_EXCEEDED → le budget de nœuds a été atteint sans solution :
+//                            ABSENCE de preuve, pas preuve d'absence — le rejet
+//                            n'est pas mathématiquement fondé.
 // ---------------------------------------------------------------------------
+
+export const COMPOSE_SOLVED = "SOLVED";
+export const COMPOSE_UNSOLVABLE_PROVEN = "UNSOLVABLE_PROVEN";
+export const COMPOSE_SEARCH_BUDGET_EXCEEDED = "SEARCH_BUDGET_EXCEEDED";
 
 const FILL_BUDGET = 6000;
 
@@ -95,12 +102,12 @@ function solveFill(baseSpec, rowsO, colsO, budget = FILL_BUDGET) {
       const v = grid[r][c];
       if (v === -1) free.push([r, c]);
       else {
-        if (reserve[v] === undefined) return null;
+        if (reserve[v] === undefined) return { status: COMPOSE_UNSOLVABLE_PROVEN, nodes: 0 };
         reserve[v] -= 1;
       }
     }
   }
-  for (const k of Object.keys(reserve)) if (reserve[k] < 0) return null;
+  for (const k of Object.keys(reserve)) if (reserve[k] < 0) return { status: COMPOSE_UNSOLVABLE_PROVEN, nodes: 0 };
 
   const values = Object.keys(reserve)
     .map(Number)
@@ -114,8 +121,12 @@ function solveFill(baseSpec, rowsO, colsO, budget = FILL_BUDGET) {
   };
 
   let nodes = 0;
+  let budgetHit = false;
   function rec(i) {
-    if (++nodes > budget) return null;
+    if (++nodes > budget) {
+      budgetHit = true; // nœud refusé : le budget ne suffit PAS pour conclure
+      return null;
+    }
     if (i === free.length) {
       const targets = [];
       for (let r = 0; r < R; r++) {
@@ -157,17 +168,21 @@ function solveFill(baseSpec, rowsO, colsO, budget = FILL_BUDGET) {
     }
     return null;
   }
-  return rec(0);
+  const sol = rec(0);
+  if (sol) return { status: COMPOSE_SOLVED, nodes, grid: sol.grid, targets: sol.targets };
+  // Arbre entièrement parcouru sans solution :
+  //   budgetHit=false → épuisement complet → PREUVE d'infaisabilité ;
+  //   budgetHit=true  → budget dépassé  → ABSENCE de preuve (ni oui ni non).
+  return { status: budgetHit ? COMPOSE_SEARCH_BUDGET_EXCEEDED : COMPOSE_UNSOLVABLE_PROVEN, nodes };
 }
 
 // ---------------------------------------------------------------------------
 // Composition pure : baseSpec (shape + réserve, cellule fixes conservées)
 //  + gardiens → UNE nouvelle SessionSpec VALIDE (ops + targets recalculés).
-// ✔ null si la composition est infaisable (ou budget de recherche épuisé) pour ce shape (contrat → validateSymbiote).
 // ✔ jette TypeError si le CONTRAT structurel est violé (jamais l'UI qui décide).
 // ---------------------------------------------------------------------------
 
-export function composeGuardianSpec(baseSpec, guardians) {
+function prepareComposition(baseSpec, guardians) {
   if (!baseSpec || typeof baseSpec !== "object") throw new TypeError("symbiote : baseSpec requis");
   const g = sanitizeGuardians(guardians);
   const base = deepClone(baseSpec);
@@ -178,9 +193,10 @@ export function composeGuardianSpec(baseSpec, guardians) {
     throw new TypeError(`symbiote : baseSpec invalide — ${err.message}`);
   }
   const { rows: rowsO, cols: colsO } = guardianLineOps(validated, g);
-  const sol = solveFill(validated, rowsO, colsO);
-  if (!sol) return null;
+  return { g, validated, rowsO, colsO };
+}
 
+function buildComposedSpec({ validated, rowsO, colsO }, sol) {
   // La grille de la spec composée garde uniquement les cellules fixes du base
   // (jamais la solution) ; les targets DU découlent du remplissage canonique.
   const spec = {
@@ -191,6 +207,31 @@ export function composeGuardianSpec(baseSpec, guardians) {
   };
   validateSpec(spec); // le compositeur produit TOUJOURS une spec contractuellement valide
   return spec;
+}
+
+// composeGuardianSpec : API historique — null si aucune composition trouvée.
+// Le null AGRÈGE les deux échecs (prouvé / budget) ; préférer
+// composeGuardianSpecEx pour distinguer preuve d'infaisabilité et budget épuisé.
+export function composeGuardianSpec(baseSpec, guardians) {
+  const p = prepareComposition(baseSpec, guardians);
+  const res = solveFill(p.validated, p.rowsO, p.colsO);
+  if (res.status !== COMPOSE_SOLVED) return null;
+  return buildComposedSpec(p, res);
+}
+
+// composeGuardianSpecEx : sémantique tri-état explicite (M16.x).
+//   { ok:true,  status:"SOLVED", nodes, spec }
+//   { ok:false, status:"UNSOLVABLE_PROVEN" | "SEARCH_BUDGET_EXCEEDED", nodes, spec:null }
+// opts.fillBudget : budget de nœuds du backtracker (défaut FILL_BUDGET).
+// Déterministe : mêmes entrées → même statut, mêmes nodes, même spec.
+export function composeGuardianSpecEx(baseSpec, guardians, opts = {}) {
+  const p = prepareComposition(baseSpec, guardians);
+  const budget = Number.isInteger(opts.fillBudget) && opts.fillBudget > 0 ? opts.fillBudget : FILL_BUDGET;
+  const res = solveFill(p.validated, p.rowsO, p.colsO, budget);
+  if (res.status !== COMPOSE_SOLVED) {
+    return { ok: false, status: res.status, nodes: res.nodes, spec: null };
+  }
+  return { ok: true, status: COMPOSE_SOLVED, nodes: res.nodes, spec: buildComposedSpec(p, res) };
 }
 
 function deepClone(x) {
@@ -251,18 +292,19 @@ export function validateSymbiote(sp) {
 
   let composed;
   try {
-    composed = composeGuardianSpec(sp.baseSpec, sp.guardians);
+    composed = composeGuardianSpecEx(sp.baseSpec, sp.guardians);
   } catch (err) {
     return { ok: false, reasons: [err.message] };
   }
-  if (composed === null) {
+  if (!composed.ok) {
     reasons.push(
-      "symbiote : composition infaisable sous budget (FILL_BUDGET=" + FILL_BUDGET + ") — aucune loi n'est trichée ; " +
-        "ce rejet n'est pas une preuve mathématique d'infaisabilité"
+      composed.status === COMPOSE_SEARCH_BUDGET_EXCEEDED
+        ? `symbiote : recherche épuisée sans preuve (SEARCH_BUDGET_EXCEEDED, ${composed.nodes} nœuds, FILL_BUDGET=${FILL_BUDGET}) — ce rejet n'est pas une preuve mathématique d'infaisabilité`
+        : "symbiote : composition PROUVÉE infaisable (UNSOLVABLE_PROVEN) — aucune loi n'est trichée, ce shape ne loge pas ces Gardiens"
     );
     return { ok: false, reasons };
   }
-  return { ok: true, reasons: [], spec: composed };
+  return { ok: true, reasons: [], spec: composed.spec };
 }
 
 // createSymbioteSession : la seule frontière vers l'Engine.

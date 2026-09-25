@@ -12,12 +12,16 @@ import {
   GUARDIAN_IDS,
   baseSpecById,
   composeGuardianSpec,
+  composeGuardianSpecEx,
   createSymbioteSession,
   evaluateSymbiosis,
   guardianFragments,
   guardianRules,
   symbioteSpec,
   validateSymbiote,
+  COMPOSE_SOLVED,
+  COMPOSE_UNSOLVABLE_PROVEN,
+  COMPOSE_SEARCH_BUDGET_EXCEEDED,
 } from "../../src/atelier/symbiote.mjs";
 import { createKnowledgeStore, listFragments, getFragment, evaluateFragmentUnlocks } from "../../src/atelier/knowledge.mjs";
 import { createReplayController } from "../../src/atelier/replay-controller.mjs";
@@ -368,4 +372,68 @@ test("SYM-17 : encodeSeal/decodeSeal survivent à une spec composée (M12 intact
   assert.equal(verifySeal(seal).ok, true);
   const dec = decodeSeal(seal);
   assert.deepEqual(dec.spec, spec);
+});
+
+// ---------------------------------------------------------------------------
+// SYM-18 · Tri-état (M16.x) — SOLVED : statut exact, nodes déterministes,
+// cohérence totale avec l'API historique composeGuardianSpec.
+// ---------------------------------------------------------------------------
+test("SYM-18 : composeGuardianSpecEx → SOLVED sur les 15 compositions, déterministe et cohérent avec l'API historique", () => {
+  assert.equal(ALL_SETS.length, 15);
+  for (const g of ALL_SETS) {
+    const a = composeGuardianSpecEx(baseClone(), g);
+    assert.equal(a.ok, true, `${g.join("+")} devrait être SOLVED`);
+    assert.equal(a.status, COMPOSE_SOLVED);
+    assert.ok(Number.isInteger(a.nodes) && a.nodes > 0, "nodes comptés et positifs");
+    assert.ok(a.spec);
+    const b = composeGuardianSpecEx(baseClone(), g);
+    assert.deepEqual(a, b, `${g.join("+")} : F(B,G)=F(B,G) (statut, nodes et spec inclus)`);
+    // l'API historique retourne exactement la même spec
+    assert.deepEqual(a.spec, composeGuardianSpec(baseClone(), g));
+  }
+});
+
+// ---------------------------------------------------------------------------
+// SYM-19 · Tri-état — UNSOLVABLE_PROVEN : arbre ENTIÈREMENT épuisé = preuve
+// mathématique d'infaisabilité (déterministe). Ici : réserve vide → aucune
+// valeur plaçable, l'échec est prouvé sans même toucher le budget.
+// ---------------------------------------------------------------------------
+test("SYM-19 : réserve vide → UNSOLVABLE_PROVEN (arbre épuisé), déterministe, raison contrat exacte", () => {
+  const base = baseSpecById("CHAMBRE_2X2");
+  base.reserve = {}; // aucune valeur plaçable : l'arbre est trivialement épuisé
+  const a = composeGuardianSpecEx(base, ["AL_JABR"]);
+  assert.equal(a.ok, false);
+  assert.equal(a.status, COMPOSE_UNSOLVABLE_PROVEN);
+  assert.equal(a.nodes, 1); // la racine est visitée, aucun enfant ne peut s'ouvrir
+  assert.equal(a.spec, null);
+  const b = composeGuardianSpecEx(JSON.parse(JSON.stringify(base)), ["AL_JABR"]);
+  assert.deepEqual(a, b); // même preuve, byte-identique
+  // validateSymbiote porte la raison PROUVÉE — jamais la mention budget
+  const v = validateSymbiote({ guardians: ["AL_JABR"], baseSpec: JSON.parse(JSON.stringify(base)), mode: SYMBIOTE_MODE });
+  assert.equal(v.ok, false);
+  assert.ok(v.reasons.some((r) => r.includes("UNSOLVABLE_PROVEN")), JSON.stringify(v.reasons));
+  assert.ok(!v.reasons.some((r) => r.includes("SEARCH_BUDGET_EXCEEDED")));
+});
+
+// ---------------------------------------------------------------------------
+// SYM-20 · Tri-état — SEARCH_BUDGET_EXCEEDED : budget serré injecté → ABSENCE
+// de preuve (ni oui ni non) ; le même input avec le budget par défaut → SOLVED,
+// ce qui démontre que le rejet serré n'était PAS une preuve d'infaisabilité.
+// ---------------------------------------------------------------------------
+test("SYM-20 : budget injecté → SEARCH_BUDGET_EXCEEDED sans preuve, puis SOLVED au budget normal", () => {
+  const g = ["AL_JABR", "FRACTALIA", "NEXUS", "SCINDIUM"]; // convergence : recherche la plus large
+  const tight = composeGuardianSpecEx(baseClone(), g, { fillBudget: 3 });
+  assert.equal(tight.ok, false);
+  assert.equal(tight.status, COMPOSE_SEARCH_BUDGET_EXCEEDED);
+  assert.ok(tight.nodes > 3, "les nœuds refusés restent comptés");
+  assert.equal(tight.spec, null);
+  // le même input au budget par défaut trouve : le rejet serré n'était pas une preuve
+  const wide = composeGuardianSpecEx(baseClone(), g, { fillBudget: 6000 });
+  assert.equal(wide.ok, true);
+  assert.equal(wide.status, COMPOSE_SOLVED);
+  assert.ok(wide.spec);
+  assert.deepEqual(wide.spec, composeGuardianSpec(baseClone(), g));
+  // déterminisme du rejet : même budget serré → même statut, mêmes nodes
+  const tight2 = composeGuardianSpecEx(baseClone(), g, { fillBudget: 3 });
+  assert.deepEqual(tight, tight2);
 });

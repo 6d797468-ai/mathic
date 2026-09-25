@@ -106,7 +106,7 @@ L'algorithme garantit $F(B, G) = F(B, G)$ sans aucune dérive :
    $$\text{rowOp}(r) = \text{op}(\text{guardians}[r \bmod |G|])$$
    $$\text{colOp}(c) = \text{op}(\text{guardians}[(|R| + c) \bmod |G|])$$
 2. **Recherche de cibles** : parcours ligne-major des cellules libres, sélection des valeurs ordonnées de la réserve, élagage immédiat dès qu'une ligne ou colonne complète produit un résultat invalide (`null` sous V5).
-3. **Plafonnement de budget** : si le nombre de nœuds dépasse le budget sans solution, retour `null` (composition **infaisable sous budget** — `null` signale l'absence de solution trouvée dans `FILL_BUDGET`, ce qui n'est **pas** une preuve mathématique d'infaisabilité ; sémantique tri-état `SOLVED / UNSOLVABLE_PROVEN / SEARCH_BUDGET_EXCEEDED` prévue en M16.x).
+3. **Plafonnement de budget** : si le nombre de nœuds dépasse le budget sans solution, retour `null` (composition **infaisable sous budget** — `null` signale l'absence de solution trouvée dans `FILL_BUDGET`, ce qui n'est **pas** une preuve mathématique d'infaisabilité ; sémantique tri-état `SOLVED / UNSOLVABLE_PROVEN / SEARCH_BUDGET_EXCEEDED` **implémentée en M16.x** via `composeGuardianSpecEx(baseSpec, guardians, { fillBudget })` — l'arbre de recherche entièrement épuisé (`UNSOLVABLE_PROVEN`) constitue une preuve mathématique d'infaisabilité, tandis que le budget atteint (`SEARCH_BUDGET_EXCEEDED`) est une absence de preuve).
 4. **Intégrité de grille** : la grille retournée reproduit exactement la grille de base (`-1` pour chaque case libre, conservation des cases fixes éventuelles).
 
 ---
