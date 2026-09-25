@@ -238,7 +238,7 @@ export function createRuntimeAdapter(options = {}) {
       if (terminal) return { ok: false, reason: "TERMINAL" };
       if (trace.length === 0) return { ok: false, reason: "NOTHING_TO_UNDO" };
       const undone = trace.pop();
-      const nxt = engine.createSession(level);
+      let nxt = engine.createSession(level);
       for (const a of trace) {
         const r = engine.apply(nxt, a);
         if (r) nxt = r;
