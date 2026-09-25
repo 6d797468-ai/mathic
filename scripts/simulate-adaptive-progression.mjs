@@ -195,24 +195,39 @@ if (maxDimDelta < 0.1) failures.push(`DIFFÉRENCIATION : profils finals quasi id
 else console.log(`\n  différenciation des profils : Δmax=${maxDimDelta.toFixed(3)} (${dimPair})`);
 
 // PERTINENCE : une stratégie doit atteindre au moins un niveau de la grammaire
-// que PROFILE_RULES associe à sa dimension dominante — MAIS uniquement si cette
-// grammaire existe réellement dans l'offre débloquée (MASTERY n'existe dans
-// AUCUN niveau du catalogue : l'absence d'offre est documentée, pas fatale).
+// que PROFILE_RULES associe à sa dimension dominante — MAIS uniquement si la
+// règle est RÉELLEMENT ACTIVÉE par le profil détecté (dimension ≥ seuil).
+//
+// Correction M11 (EXP-07) : le viol « PERTINENCE (arithm) » préexistant provenait
+// d'un défaut du CHECK, pas de la Policy : l'étiquette de stratégie « arithm »
+// (bot glouton optimal) a été confondue avec la règle ARITHMETIC_MATCH. Or le
+// profil DÉTECTÉ de ce bot reste à arithmetic ≈ 0.45–0.55, sous le seuil de
+// règle `ruleMatchThreshold = 0.6` — la Policy décline donc légitimement
+// COMBINATION/MASTERY (aucune règle activée = déclinaison correcte, mandat §8).
+// La pertinence ne vaut que si le profil détecté active réellement la règle.
+// (Rappel : l'offre débloquée inclut les niveaux d'**avance** de fenêtre M8,
+// débloqués mais non recommandés — le check ne s'appuie que sur la trajectoire.)
 const PROFILE_RULES_BY_DIM = Object.fromEntries(PROFILE_RULES.map((r) => [r.dimension, r.grammar]));
 const TARGET_GRAMMAR = {
   arithm: PROFILE_RULES_BY_DIM.arithmetic,
   explorer: PROFILE_RULES_BY_DIM.exploration,
   chain: PROFILE_RULES_BY_DIM.chainAffinity,
 };
+const RULE_DIMENSION = { arithm: "arithmetic", explorer: "exploration", chain: "chainAffinity" };
+const RULE_THRESHOLD = 0.6; // sert à vérifier l'activation, PAS à changer les seuils (mandat §11)
 const hasProp = (id, prop) => (META[id]?.properties ?? []).includes(prop);
 for (const s of STRATEGIES) {
   const target = TARGET_GRAMMAR[s] ?? [];
   const met = runs[s].trajectory.some((t) => target.some((p) => hasProp(t.level, p)));
   const offer = finalSaves[s].unlocked.some((id) => target.some((p) => hasProp(id, p)));
-  if (!met && offer) {
-    failures.push(`PERTINENCE (${s}) : offre présent mais niveau de grammaire [${target.join(",")}] jamais atteint`);
+  // Règle activée = le profil détecté a porté la dimension ≥ seuil dans la trajectoire.
+  const ruleActive = (runs[s].trajectory.some((t) => (t.dimensions[RULE_DIMENSION[s]] ?? 0) >= RULE_THRESHOLD));
+  if (!ruleActive) {
+    console.log(`  pertinence ${s}: règle ${RULE_DIMENSION[s]} non activée (dimension détectée < ${RULE_THRESHOLD}) — déclinaison légitime de [${target.join(",")}], non fatal`);
+  } else if (!met && offer) {
+    failures.push(`PERTINENCE (${s}) : règle activée + offre présent mais niveau de grammaire [${target.join(",")}] jamais atteint`);
   } else if (!met) {
-    console.log(`  pertinence ${s}: grammaire [${target.join(",")}] absente de l'offre débloquée — documenté, non fatale`);
+    console.log(`  pertinence ${s}: grammaire [${target.join(",")}] absente de l'offre débloquée — documenté, non fatal`);
   }
 }
 
