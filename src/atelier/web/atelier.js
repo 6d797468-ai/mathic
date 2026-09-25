@@ -16,6 +16,11 @@ import {
   present,
 } from "../oculus-controller.mjs";
 import { encodeSeal, decodeSeal, verifySeal } from "../seal.mjs";
+import {
+  createKnowledgeStore,
+  getFragment,
+  listFragments,
+} from "../knowledge.mjs";
 
 const PRESETS = {
   SUM2X2: {
@@ -91,11 +96,89 @@ const els = {
   oculusBody: $("oculus-body"),
   btnOculusClose: $("btn-oculus-close"),
   btnOculusClose2: $("btn-oculus-close2"),
+  // Marges de Maggeek
+  fragments: $("fragments"),
+  margesNote: $("marges-note"),
 };
+
+// ---- Mémoire pédagogique (M15) — Fragments de Savoir ----------------------
+// L'observation (Verified Event) → évaluation pure → union monotone → persistance.
+// Le lore n'INVENTE jamais un fait : chaque Fragment est rattaché à un fait
+// moteur/Oculus/Sablier/Sceau réellement observé dans CETTE session.
 
 let ctrl = null;          // ReplayController — le présent est le curseur
 let currentLabel = null;
 let importedSpec = null;
+let wasSolved = false;     // détection de transition réelle vers solved
+
+// Backend de persistance injecté (Web Storage). S'il est indisponible ou qu'il
+// échoue, knowledge bascule en mémoire : l'Atelier ne dépend jamais du lore.
+let knowledge = null;
+const storageBackend = (() => {
+  try {
+    const ls = window.localStorage;
+    return {
+      get: (k) => ls.getItem(k),
+      set: (k, v) => ls.setItem(k, v),
+    };
+  } catch {
+    return null; // storage indisponible → fallback mémoire (KNOW-18)
+  }
+})();
+knowledge = createKnowledgeStore(storageBackend);
+
+let unlockedIds = [];
+let sessionSeq = []; // évidence réelle de la session, chronologique
+
+async function observe(o) {
+  if (!knowledge) return;
+  sessionSeq.push(o);
+  try {
+    const { state, newlyUnlocked } = await knowledge.recordAll({ sequence: sessionSeq });
+    unlockedIds = state.unlockedFragments;
+    renderMarges();
+    if (newlyUnlocked.length) {
+      const f = getFragment(newlyUnlocked[0]);
+      setStatus(`Fragment débloqué : « ${f.title} »`, "ok");
+    }
+  } catch {
+    renderMarges(); // le lore ne bloque jamais la session
+  }
+}
+
+function renderMarges() {
+  if (!els.fragments) return;
+  const unlocked = new Set(unlockedIds);
+  els.fragments.innerHTML = "";
+  for (const f of listFragments()) {
+    const li = document.createElement("li");
+    li.className = "frag" + (unlocked.has(f.id) ? " on" : " off");
+    if (unlocked.has(f.id)) {
+      const det = document.createElement("details");
+      const sum = document.createElement("summary");
+      sum.textContent = `✦ ${f.title} · ${f.category}`;
+      const fact = document.createElement("p");
+      fact.className = "mono frag-fact";
+      fact.textContent = `FAIT — ${f.fact}`;
+      const body = document.createElement("p");
+      body.className = "frag-body";
+      body.textContent = f.body;
+      det.append(sum, fact, body);
+      li.appendChild(det);
+    } else {
+      const span = document.createElement("span");
+      span.className = "frag-locked";
+      span.textContent = `○ ${f.title}`;
+      li.appendChild(span);
+    }
+    els.fragments.appendChild(li);
+  }
+  if (els.margesNote) {
+    els.margesNote.textContent = knowledge
+      ? `${unlockedIds.length}/${listFragments().length} fragments · mémoire ${knowledge.mode}`
+      : "mémoire indisponible — l'Atelier continue.";
+  }
+}
 
 const boardView = (state) =>
   state.grid.map((row) => row.map((v) => (v === -1 ? null : v)));
@@ -144,6 +227,13 @@ function renderBoard() {
   els.moves.textContent = moves;
   els.solved.textContent = solved ? "OUI ✦" : "non";
   els.solved.style.color = solved ? "#4ade80" : "#8b91a7";
+
+  // CHALLENGE_COMPLETED — transition RÉELLE vers isSolved (jamais le fait que la
+  // grille soit « affichable »). Observé depuis getState() au curseur.
+  if (solved && !wasSolved) {
+    wasSolved = true;
+    observe({ t: "CHALLENGE_COMPLETED", moves });
+  }
   const reserveTxt = Object.entries(state.reserve)
     .filter(([, n]) => n > 0)
     .map(([v, n]) => `${v}×${n}`)
@@ -216,6 +306,7 @@ els.btnBack.addEventListener("click", () => {
   if (!ctrl) return;
   try {
     ctrl.back(1);
+    observe({ t: "REWIND_USED", depth: 1, source: "back" });
     setStatus("Un cran remonté. Observe le point de bascule.", "ok");
     renderBoard();
   } catch (err) {
@@ -227,6 +318,7 @@ els.btnStart.addEventListener("click", () => {
   if (!ctrl) return;
   try {
     ctrl.backToStart();
+    observe({ t: "REWIND_USED", depth: ctrl.cursor().position, source: "backToStart" });
     setStatus("Retour à l'origine de la trace.", "ok");
     renderBoard();
   } catch (err) {
@@ -249,6 +341,7 @@ els.btnUndo.addEventListener("click", () => {
   if (!ctrl) return;
   const u = ctrl.undo();
   if (u.ok) {
+    observe({ t: "UNDO_USED", position: u.position });
     setStatus("Dernier coup tronqué de la trace (branche).", "ok");
     renderBoard();
   } else {
@@ -281,6 +374,7 @@ function oculusClose() {
 function renderOculusState() {
   if (!ctrl) return;
   const a = analyzeState(ctrl.spec, ctrl.trace, ctrl.position);
+  observe({ t: "OCULUS_STATE_ANALYZED", cursor: a.cursor });
   const p = present(a);
   const lines = a.lines.rows.concat(a.lines.cols);
   let html = `
@@ -298,6 +392,12 @@ function renderOculusState() {
 function oculusAttempt({ v, r, c }) {
   if (!ctrl) return;
   const a = analyzeAction(ctrl.spec, ctrl.trace, ctrl.position, { value: +v, r: +r, c: +c });
+  observe({ t: "OCULUS_ACTION_ANALYZED", reasonCode: a.reasonCode, valid: a.valid, offered: a.offered });
+  // Une incantation refusée OU écartée par la loi est une « erreur inspectée » :
+  // deux faits réels et distincts de l'Oculus (apply / getMoves), jamais inventés.
+  if (!a.valid || !a.offered) {
+    observe({ t: "OCULUS_REJECTION_OBSERVED", reasonCode: a.reasonCode });
+  }
   const p = present(a);
   const st = analyzeState(ctrl.spec, ctrl.trace, a.cursor);
   const lines = st.lines.rows.concat(st.lines.cols);
@@ -329,6 +429,7 @@ function initCtrl(spec, label) {
   ctrl = createReplayController(spec);
   currentLabel = label;
   importedSpec = null;
+  wasSolved = false;
   renderBoard();
 }
 
@@ -350,6 +451,7 @@ els.btnSeal.addEventListener("click", () => {
   try {
     const spec = ctrl.spec;
     const seal = encodeSeal(spec);
+    observe({ t: "SEAL_CREATED", length: seal.length });
     els.sealOut.textContent = seal;
     els.btnCopy.disabled = seal.length === 0;
     setStatus(`Sceau forgé (${seal.length} caractères). Copie-le, partout, hors ligne.`, "ok");
@@ -401,4 +503,15 @@ els.btnImport.addEventListener("click", () => {
 });
 
 renderPresets();
+if (knowledge) {
+  knowledge
+    .load()
+    .then((s) => {
+      unlockedIds = s.unlockedFragments;
+      renderMarges();
+    })
+    .catch(() => renderMarges());
+} else {
+  renderMarges();
+}
 initCtrl(JSON.parse(JSON.stringify(PRESETS.SUM2X2.spec)), PRESETS.SUM2X2.label);
