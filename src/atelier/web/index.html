@@ -31,6 +31,22 @@
         <p id="status" class="status" aria-live="polite"></p>
       </section>
 
+      <section class="panel" id="sablier" data-mode="present">
+        <h2>⌛ Sablier de Chronos</h2>
+        <p class="hint">« Remonte le temps. Observe ton erreur. Trouve l'instant où ton raisonnement a bifurqué. »</p>
+        <div class="timeline">
+          <div class="rail"><div class="curve" id="curve"></div></div>
+        </div>
+        <div class="row">
+          <button id="btn-start" type="button" class="secondary" disabled>⟲ Origine</button>
+          <button id="btn-back" type="button" class="secondary" disabled>← Revenir</button>
+          <button id="btn-undo" type="button" class="secondary" disabled>Annuler</button>
+          <button id="btn-present" type="button" class="secondary" disabled>Reprendre</button>
+        </div>
+        <p class="readout mono">Coup <b id="cursor-pos">0</b> / <b id="cursor-total">0</b></p>
+        <p id="replay-status" class="status mono" aria-live="polite"></p>
+      </section>
+
       <section class="panel">
         <h2>2 · Frapper le Sceau</h2>
         <p class="hint">Génère une clé déterministe de ce défi, copiable partout.</p>

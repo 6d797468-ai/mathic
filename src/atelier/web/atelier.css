@@ -279,3 +279,64 @@ button.secondary {
   color: var(--muted);
   font-family: var(--mono);
 }
+
+/* ── Sablier de Chronos (UI uniquement — aucun effet moteur) ─────────────── */
+
+.timeline {
+  padding: 4px 0;
+}
+
+.rail {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--chip);
+  border: 1px solid var(--line-soft);
+  overflow: hidden;
+}
+
+.curve {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--gold-soft), var(--gold));
+  border-radius: 3px;
+  transition: width 0.25s ease;
+}
+
+.readout {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.readout b {
+  color: var(--gold);
+}
+
+#sablier[data-mode="history"] .curve {
+  background: linear-gradient(90deg, var(--violet), var(--gold));
+}
+
+/* Filtre visuel "mémoire" : sépia/histoire quand on n'est plus au présent.
+   Strictement UI — l'état affiché reste le getState() du replay réel. */
+body.rewound .board {
+  filter: sepia(0.55) saturate(0.8);
+  transition: filter 0.3s ease;
+}
+
+#sablier[data-mode="history"] {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.25);
+}
+
+#sablier[data-mode="present"] {
+  border-color: var(--line);
+}
+
+body.rewound .status.rewound {
+  color: var(--gold);
+}
