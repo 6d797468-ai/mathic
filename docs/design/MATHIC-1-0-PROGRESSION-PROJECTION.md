@@ -49,7 +49,7 @@ minMoves              = env.minMoves                      [optimum certifié sol
 - **P-ordre** : ⭐3 ⇒ ⭐2 ⇒ ⭐1 — aucun état de save ne peut produire ⭐3 sans ⭐2 ;
 - **P-congruence** : sur tout niveau à `minMoves === maxMoves`, une victoire accorde les trois étoiles (conséquence de C-1/D-P1) ;
 - **Pures** : `starsOf(rec, L, env) → {1,2,3}` — même entrée → mêmes étoiles, aucune horloge, aucun aléa ;
-- **Monotones** : une étoile acquise ne peut pas être perdue (`bestMovesLeft` ne décroît pas — garantie de `markCompleted`) ;
+- **Monotones** — **portée : LADDER et enveloppe solveur immuables** (précision audit M18 §6) : une étoile acquise ne peut pas être perdue (`bestMovesLeft` ne décroît pas — garantie de `markCompleted`) ; `starsOf` recalcule depuis (record, level, envelope), donc toute évolution future du LADDER ou des règles du solveur invaliderait cette portée — une telle évolution devra d'abord versionner (`LADDER_VERSION` / `SOLVER_RULE_VERSION`) en M18.x/M19, jamais silencieusement ;
 - **Dégradées proprement** : si `env` est absente (niveau insolvable au budget solveur — ne devrait pas exister dans le LADDER), ⭐3 devient inaccordable mais ⭐1/⭐2 restent calculables — jamais de crash, jamais d'étoile inventée (I-5).
 - **Limitation documentée** : le seuil ⭐3 est un *plancher d'optimalité* (atteindre `minMoves`), pas un plafond de score — choix assumé, plus robuste que la comparaison de score (le score b1 dépend du chaînage, futur M18.x).
 
