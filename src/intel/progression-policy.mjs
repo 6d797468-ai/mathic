@@ -79,6 +79,41 @@ export const PROFILE_RULES = Object.freeze([
 const clamp01 = (x) => Math.min(1, Math.max(0, Number.isFinite(x) ? x : 0));
 
 // ---------------------------------------------------------------------------
+// MODÈLE LevelCandidate (mandat M10) — la Policy consomme EXPLICITEMENT les
+// informations sémantiques du niveau, structurées, et ne les reconstruit
+// JAMAIS depuis l'ID : LevelId ≠ LadderPosition ≠ WorldPosition ≠
+// DifficultyIndex. `ladderPosition` provient du DifficultyMetadata (canonique,
+// construit depuis LADDER) ; `world`, `stage`, `properties` et les faits de
+// design proviennent du LevelDesignMetadata réel (analyzeLevel).
+// ---------------------------------------------------------------------------
+
+export function levelCandidate(id, metadata, difficulty) {
+  const m = metadata && typeof metadata === "object" ? metadata[id] : undefined;
+  const d = difficulty && typeof difficulty === "object" ? difficulty[id] : undefined;
+  const index = typeof d?.index === "number" && Number.isFinite(d.index) ? d.index : undefined;
+  return Object.freeze({
+    id,
+    ladderPosition: index, // position canonique LADDER (jamais Number(id.slice(1)))
+    world: m?.world ?? undefined,
+    difficulty: index,
+    stage: m?.stage ?? undefined,
+    properties: Array.isArray(m?.properties) ? m.properties : [],
+    chainDepth: m?.facts?.chainDepth ?? undefined,
+    consequenceEvidence: m?.facts?.consequenceEvidence ?? undefined,
+    routeCount: m?.facts?.routeCount ?? undefined,
+    minMoves: m?.facts?.minMoves ?? undefined,
+    scoreRange: m?.facts?.scoreRange ?? undefined,
+  });
+}
+
+// Position canonique : ladderPosition si connu, sinon position dans la liste
+// d'entrée (repli rétrocompatible quand le DifficultyMetadata est absent).
+// Jamais de dérivation depuis l'ID.
+function positionOf(candidate, indexOf) {
+  return typeof candidate.ladderPosition === "number" ? candidate.ladderPosition : indexOf.get(candidate.id);
+}
+
+// ---------------------------------------------------------------------------
 // Configuration — seuils et poids documentés (mandat §10, §11, §15)
 // ---------------------------------------------------------------------------
 
@@ -150,18 +185,20 @@ function completedSet(progression) {
   return out;
 }
 
-function matchesGrammar(meta, tokens) {
-  if (meta === null || typeof meta !== "object") return false;
-  const properties = Array.isArray(meta.properties) ? meta.properties : [];
-  const stageName = typeof meta.stage === "object" && meta.stage !== null && typeof meta.stage.name === "string" ? meta.stage.name : "";
+// Adéquation grammaticale profil ↔ candidat (LevelCandidate consommé
+// explicitement : propriétés de design + stage déclaré, jamais l'ID).
+function matchesGrammar(candidate, tokens) {
+  if (candidate === null || typeof candidate !== "object") return false;
+  const properties = Array.isArray(candidate.properties) ? candidate.properties : [];
+  const stageName = typeof candidate.stage === "object" && candidate.stage !== null && typeof candidate.stage.name === "string" ? candidate.stage.name : "";
   return tokens.some((t) => properties.includes(t) || stageName === t);
 }
 
-function ruleCodesFor(meta, profile, threshold) {
+function ruleCodesFor(candidate, profile, threshold) {
   const codes = [];
   for (const rule of PROFILE_RULES) {
     const value = profile ? profile[rule.dimension] : 0;
-    if (typeof value === "number" && Number.isFinite(value) && value >= threshold && matchesGrammar(meta, rule.grammar)) {
+    if (typeof value === "number" && Number.isFinite(value) && value >= threshold && matchesGrammar(candidate, rule.grammar)) {
       codes.push(rule.code);
     }
   }
@@ -236,8 +273,23 @@ function rankedRecommendation({ eligible, order, metadata, profile, conf, cfg, d
 
   const indexOf = new Map();
   for (let i = 0; i < order.length; i++) indexOf.set(order[i], i);
-  const frontier = order.length - 1; // niveau débloqué le plus avancé
-  const span = Math.max(1, Math.ceil(order.length / 4));
+
+  // Positions CANONIQUES (mandat M10) : chaque candidat est matérialisé en
+  // LevelCandidate et sa position est la ladderPosition du DifficultyMetadata —
+  // indépendante de l'ordre d'entrée (PD-11), jamais dérivée de l'ID (PD-13).
+  const candidates = eligible.map((id) => levelCandidate(id, metadata, difficulty));
+  const posOf = (id) => {
+    const c = candidates.find((x) => x.id === id);
+    return c ? positionOf(c, indexOf) : indexOf.get(id);
+  };
+  const positions = eligible.map((id) => posOf(id));
+  // front : candidat admissible le plus avancé selon la POSITION CANONIQUE
+  const maxPos = Math.max(...positions);
+  const frontierIdx = positions.indexOf(maxPos);
+  const frontier = positions[frontierIdx];
+  const frontierId = eligible[frontierIdx];
+  const minPos = Math.min(...positions);
+  const span = Number.isFinite(maxPos) ? Math.max(1, Math.ceil((maxPos - minPos + 1) / 4) || 1) : 1;
 
   let reach = 0;
   const globalReasons = [];
@@ -254,7 +306,7 @@ function rankedRecommendation({ eligible, order, metadata, profile, conf, cfg, d
 
   const retryTolerant = (profile?.retryTolerance ?? 0) >= threshold;
   const target = frontier + reach;
-  const baseDiff = difficulty && order.length ? difficulty[order[frontier]]?.index : undefined;
+  const baseDiff = difficulty && positions.length ? difficulty[frontierId]?.index : undefined;
 
   // Score déterministe, composantes documentées (ordre décroissant d'influence) :
   //   1. grammaire      — chaque règle profil réellement exécutée pèse `weight` ;
@@ -263,26 +315,26 @@ function rankedRecommendation({ eligible, order, metadata, profile, conf, cfg, d
   //   4. reprise        — bonus si contenu au-dessus de la cible réduite et
   //                       retryTolerance ≥ seuil (rampe douce acceptée plus dure).
   const ranked = eligible.map((id) => {
-    const idx = indexOf.get(id);
-    const rawDistance = idx - target;
-    const codes = [...ruleCodesFor(metadata[id], profile, threshold)];
+    const c = levelCandidate(id, metadata, difficulty);
+    const rawDistance = posOf(id) - target;
+    const codes = [...ruleCodesFor(c, profile, threshold)];
     let score = codes.length * weight;
     if (rawDistance > 0 && retryTolerant) {
       codes.push("RETRY_MATCH");
       score += cfg.retryBonusWeight;
     }
-    if (difficulty && baseDiff !== undefined && Number.isFinite(difficulty[id]?.index)) {
-      const d = difficulty[id].index - (baseDiff + reach);
+    if (difficulty && baseDiff !== undefined && typeof c.difficulty === "number") {
+      const d = c.difficulty - (baseDiff + reach);
       if (Math.abs(d) <= cfg.difficultyBand) {
         codes.push("DIFFICULTY_IN_BAND");
         score += cfg.difficultyBandWeight;
       }
     }
     score += clamp01(1 - Math.abs(rawDistance) / span) * cfg.proximityWeight;
-    return { id, score, distance: rawDistance, codes };
+    return { id, score, distance: rawDistance, codes, level: c };
   });
 
-  ranked.sort((a, b) => b.score - a.score || Math.abs(a.distance) - Math.abs(b.distance) || indexOf.get(a.id) - indexOf.get(b.id));
+  ranked.sort((a, b) => b.score - a.score || Math.abs(a.distance) - Math.abs(b.distance) || posOf(a.id) - posOf(b.id));
   return { ranked, globalReasons, reach };
 }
 

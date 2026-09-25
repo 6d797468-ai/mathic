@@ -25,7 +25,7 @@
  *   node scripts/simulate-adaptive-progression.mjs --n 10 --seed 42  --window 3
  */
 
-import { LADDER } from "../src/b1/levels.mjs";
+import { LADDER, ladderDifficulty } from "../src/b1/levels.mjs";
 import { analyzeAll } from "../src/b1/level-design.mjs";
 import { isUnlocked } from "../src/b1/save.mjs";
 import { createSimStorage, selfPlayAdaptive } from "../src/intel/adaptive-experiment.mjs";
@@ -43,7 +43,7 @@ const WINDOW = flag("window", 3);
 const ANALYSIS = analyzeAll({ budget: 40000 });
 const IDS = ANALYSIS.map((a) => a.id);
 const META = Object.fromEntries(ANALYSIS.map((a) => [a.id, a]));
-const DIFFICULTY = Object.fromEntries(IDS.map((id) => [id, { index: Number(id.slice(1)) }]));
+const DIFFICULTY = ladderDifficulty();
 
 const STRATEGIES = ["arithm", "explorer", "chain"];
 

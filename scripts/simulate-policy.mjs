@@ -21,7 +21,7 @@
  * Code de sortie 1 si une violation de légalité ou de déterminisme est détectée.
  */
 
-import { LADDER } from "../src/b1/levels.mjs";
+import { LADDER, ladderDifficulty } from "../src/b1/levels.mjs";
 import { analyzeAll } from "../src/b1/level-design.mjs";
 import {
   POLICY_VERSION,
@@ -64,7 +64,7 @@ console.error(`Analyse du catalogue N1-N36 (Solver)…`);
 const ANALYSIS = analyzeAll();
 const META = Object.fromEntries(ANALYSIS.map((a) => [a.id, a]));
 const IDS = ANALYSIS.map((a) => a.id);
-const DIFFICULTY = Object.fromEntries(IDS.map((id) => [id, { index: Number(id.slice(1)) }]));
+const DIFFICULTY = ladderDifficulty();
 const LEVEL_IDS = new Set(IDS);
 
 const progressionOf = (n) => {

@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { createSession, apply, evaluate, enumerateActions, isWon, isLost, isBlocked } from "../../src/b1/engine.mjs";
-import { LADDER } from "../../src/b1/levels.mjs";
+import { LADDER, ladderDifficulty } from "../../src/b1/levels.mjs";
 import { analyzeAll } from "../../src/b1/level-design.mjs";
 import { SAVE_KEY } from "../../src/b1/save.mjs";
 
@@ -38,7 +38,7 @@ import { createClock } from "../../src/intel/evidence.mjs";
 const ANALYSIS = analyzeAll({ budget: 40000 });
 const META = Object.fromEntries(ANALYSIS.map((a) => [a.id, a]));
 const IDS = ANALYSIS.map((a) => a.id);
-const DIFFICULTY = Object.fromEntries(IDS.map((id) => [id, { index: Number(id.slice(1)) }]));
+const DIFFICULTY = ladderDifficulty();
 
 const readIntelSource = (rel) => readFileSync(fileURLToPath(new URL(`../../src/intel/${rel}`, import.meta.url)), "utf8");
 

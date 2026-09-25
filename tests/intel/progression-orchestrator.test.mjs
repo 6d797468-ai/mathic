@@ -10,7 +10,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { LADDER } from "../../src/b1/levels.mjs";
+import { LADDER, ladderDifficulty } from "../../src/b1/levels.mjs";
 import { analyzeAll } from "../../src/b1/level-design.mjs";
 import { SAVE_KEY } from "../../src/b1/save.mjs";
 import { POLICY_VERSION, PROFILE_SCHEMA_VERSION } from "../../src/intel/contracts.mjs";
@@ -31,7 +31,7 @@ import {
 const ANALYSIS = analyzeAll({ budget: 40000 });
 const META = Object.fromEntries(ANALYSIS.map((a) => [a.id, a]));
 const IDS = ANALYSIS.map((a) => a.id);
-const DIFFICULTY = Object.fromEntries(IDS.map((id) => [id, { index: Number(id.slice(1)) }]));
+const DIFFICULTY = ladderDifficulty();
 
 const memoryStorage = () => {
   const m = new Map();

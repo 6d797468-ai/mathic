@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { LADDER } from "../../src/b1/levels.mjs";
+import { LADDER, ladderDifficulty } from "../../src/b1/levels.mjs";
 import { analyzeAll } from "../../src/b1/level-design.mjs";
 import {
   POLICY_VERSION,
@@ -32,7 +32,7 @@ import {
 const ANALYSIS = analyzeAll();
 const META = Object.fromEntries(ANALYSIS.map((a) => [a.id, a]));
 const IDS = ANALYSIS.map((a) => a.id);
-const DIFFICULTY = Object.fromEntries(IDS.map((id) => [id, { index: Number(id.slice(1)) }]));
+const DIFFICULTY = ladderDifficulty();
 
 const level = (id) => LADDER.find((l) => l.id === id);
 const readSource = (rel) => readFileSync(fileURLToPath(new URL(`../../${rel}`, import.meta.url)), "utf8");

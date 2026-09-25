@@ -947,6 +947,26 @@ export const WORLDS = [
   { id: "W6", name: "La Synthèse", concept: "combinaison des outils, déduction, capstone", kind: "synth" },
 ];
 
+// ---------------------------------------------------------------------------
+// POSITION CANONIQUE LADDER (MISSION 10)
+//
+// Règle fondamentale : LevelId ≠ LadderPosition ≠ WorldPosition ≠
+// DifficultyIndex. La position canonique d'un niveau est sa place DANS LADDER,
+// jamais dérivée de Number(levelId.slice(1)) : N25 est à la position 26 (N37
+// est inséré en 25). Toute couche (Policy, Orchestrator, expériences, tests)
+// consomme la position via ces deux accès, et seulement eux.
+// ---------------------------------------------------------------------------
+
+export function ladderPosition(id) {
+  const i = LADDER.findIndex((l) => l.id === id);
+  return i >= 0 ? i + 1 : 0;
+}
+
+// Métadonnée de difficulté canonique : { index: position LADDER (1-based) }.
+export function ladderDifficulty() {
+  return Object.fromEntries(LADDER.map((l, i) => [l.id, { index: i + 1 }]));
+}
+
 export function worldOf(id) {
   return ladderBy(id)?.world ?? null;
 }
