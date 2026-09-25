@@ -205,7 +205,7 @@ test("B1.5 — SMOKE DOM : grammaire TAP→PREVIEW→TRANSFORMER jouée en live 
   assert.ok(!kinds.includes("invalid"), "aucune formule invalide sur le parcours propre");
 });
 
-test("B2/CG — PLAYTHROUGH AUTONOME : les 36 niveaux joués en live par l'UI (TAP→PREVIEW→TRANSFORMER)", () => {
+test("B2/CG — PLAYTHROUGH AUTONOME : tous les niveaux joués en live par l'UI (TAP→PREVIEW→TRANSFORMER)", () => {
   const qs = (slot) => formula.querySelector(`[data-slot="${slot}"]`);
   const cellBtn = (id) => boardButtons.find((b) => b.dataset.id === String(id));
   const navBtn = (id) => deepFind(els["levels"], id);

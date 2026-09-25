@@ -36,7 +36,7 @@ import {
 const ANALYSIS = analyzeAll({ budget: 40000 });
 const META = Object.fromEntries(ANALYSIS.map((a) => [a.id, a]));
 const IDS = ANALYSIS.map((a) => a.id);
-const DIFFICULTY = Object.fromEntries(IDS.map((id) => [id, { index: Number(id.slice(1)) }]));
+const DIFFICULTY = Object.fromEntries(LADDER.map((l, i) => [l.id, { index: i + 1 }]));
 
 const LEVEL = (id) => LADDER.find((l) => l.id === id);
 
@@ -181,7 +181,7 @@ test("AP-06 pertinence : la grammaire cible est atteinte dès qu'elle est dispon
   const chainRun = run("chain", 20261007);
   assert.ok(chainRun.result.trajectory.some((t) => hasProp(t.level, "CHAIN")), "chain n'atteint aucun niveau CHAIN");
   const masteryOffers = IDS.filter((id) => hasProp(id, "MASTERY"));
-  assert.equal(masteryOffers.length, 0, "MASTERY devrait être absent du catalogue (offre nulle documentée)");
+  assert.deepEqual(masteryOffers, ["N40", "N41"], "M9 : MASTERY réel proposé par le catalogue (pinnacles W6)");
 });
 
 // ---------------------------------------------------------------------------

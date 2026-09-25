@@ -107,9 +107,9 @@ test("LD — flagships de référence (N15, N17, N36)", () => {
   assert.deepEqual(n36.declared, ["MASTERY", "COMBINATION"]);
 });
 
-test("LD — invariants N1–N36 : couverture et distribution figées", () => {
+test("LD — invariants N1–N41 : couverture et distribution figées", () => {
   const all = analyzeAll();
-  assert.equal(all.length, 36);
+  assert.equal(all.length, 41);
   const tot = {
     multiPath: all.filter((a) => a.facts.multiPath).length,
     consequence: all.filter((a) => a.facts.consequenceEvidence).length,
@@ -120,9 +120,10 @@ test("LD — invariants N1–N36 : couverture et distribution figées", () => {
     chain: all.filter((a) => a.properties.includes("CHAIN")).length,
     optimisation: all.filter((a) => a.properties.includes("OPTIMIZATION")).length,
     combination: all.filter((a) => a.properties.includes("COMBINATION")).length,
+    mastery: all.filter((a) => a.properties.includes("MASTERY")).length,
   };
-  assert.deepEqual(tot, { multiPath: 28, consequence: 19, equivalent: 10, uniqueSol: 1, singlePath: 8, choice: 18, chain: 27, optimisation: 15, combination: 7 },
-    "distribution N1–N36 (table de l'Annexe du rapport)");
+  assert.deepEqual(tot, { multiPath: 31, consequence: 23, equivalent: 10, uniqueSol: 1, singlePath: 10, choice: 21, chain: 32, optimisation: 19, combination: 12, mastery: 2 },
+    "distribution N1–N41 (enrichissement M9 : +5 niveaux des mondes ÷/budget/synthèse)");
   for (const a of all) assert.equal(a.ambiguity.some((x) => x.startsWith("multi-path technique")), a.equivalentRoutes, `${a.id} : ambig prévient quand routes équivalentes`);
 });
 

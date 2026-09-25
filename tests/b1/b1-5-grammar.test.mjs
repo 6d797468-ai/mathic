@@ -23,8 +23,11 @@ function snapshot(state) {
   return JSON.stringify({ cells: cellsSnapshot(state), score: state.score, trace: state.trace, movesLeft: state.movesLeft, won: state.won, nextChain: state.nextChain });
 }
 
-test("B1.5/B2/CG — LADDER : exactement N1..N36, chaque niveau résolvable dans maxMoves", () => {
-  assert.deepEqual(LADDER.map((l) => l.id), Array.from({ length: 36 }, (_, i) => `N${i + 1}`));
+test("B1.5/B2/CG — LADDER : 41 niveaux en ordre pédagogique (M9), chaque niveau résolvable dans maxMoves", () => {
+  assert.deepEqual(
+    LADDER.map((l) => l.id),
+    ["N1","N2","N3","N4","N5","N6","N7","N8","N9","N10","N11","N12","N13","N14","N15","N16","N17","N18","N19","N20","N21","N22","N23","N24","N37","N25","N26","N27","N38","N28","N29","N39","N30","N31","N32","N33","N34","N35","N40","N41","N36"]
+  );
   for (const l of LADDER) {
     const r = solve(l, { maxMoves: l.maxMoves, budget: l.maxMoves <= 2 ? 40000 : 500000 });
     assert.equal(r.solvable, true, `${l.id} doit être solvable`);

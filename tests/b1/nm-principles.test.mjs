@@ -53,7 +53,7 @@ test("NM — intégration produit : la tagline est dans l'écran de lancement r�
   assert.ok(/<p class="tagline">/.test(html), "tagline dans un élément dédié classe tagline");
 });
 
-test("NM — invariants d'inventaire sur les 36 niveaux (Solver+Engine+Replay)", () => {
+test("NM — invariants d'inventaire sur les 41 niveaux (Solver+Engine+Replay)", () => {
   const stages = {};
   for (const lvl of LADDER) {
     const f = nmFacts(lvl, { budget: NM_DESIGN_BUDGET });
@@ -69,7 +69,7 @@ test("NM — invariants d'inventaire sur les 36 niveaux (Solver+Engine+Replay)",
       assert.equal(r.final.won, true, `${f.id} : replay converge vers la victoire`);
     }
   }
-  assert.deepEqual(stages, { choice: 14, consequence: 15, single: 6, direct: 1 }, "distribution des profils NM figée (Annexe B)");
+  assert.deepEqual(stages, { choice: 14, consequence: 19, single: 7, direct: 1 }, "distribution des profils NM figée (Annexe B, enrichie M9)");
 });
 
 test("NM — faits enregistrés : flagships certifiés (Annexe B)", () => {

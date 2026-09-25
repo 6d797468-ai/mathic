@@ -29,7 +29,8 @@ const base = () => ({ version: 1, unlocked: ["N1"], completed: {}, current: "N1"
 test("W-01 windowOf facture {N+1..N+k} avec recadrage de fin", () => {
   assert.deepEqual(windowOf("N1", 3), ["N2", "N3", "N4"]);
   assert.deepEqual(windowOf("N8", 3), ["N9", "N10", "N11"], "exemple du mandat N8→N9,N10,N11");
-  assert.deepEqual(windowOf("N35", 3), ["N36"], "recadrage : dernier niveau");
+  assert.deepEqual(windowOf("N35", 3), ["N40", "N41", "N36"], "pinnacles MASTERY (M9) puis le couronnement");
+  assert.deepEqual(windowOf("N41", 3), ["N36"], "recadrage : avant-dernier niveau");
   assert.deepEqual(windowOf("N36", 3), [], "au bout du catalogue : fenêtre vide");
   assert.deepEqual(windowOf("N1", 1), ["N2"], "retour au comportement historique");
   assert.equal(PROGRESSION_WINDOW, 3, "k produit = 3 (décision Game Design)");
@@ -190,9 +191,9 @@ test("W-09 taille de la fenêtre après complétion", () => {
   const idx35 = LADDER.findIndex((l) => l.id === "N35");
   const stNearEnd = { ...base(), unlocked: LADDER.slice(0, idx35 + 1).map((l) => l.id), completed: {} };
   const afterN35 = markCompleted(stNearEnd, "N35", { score: 10, movesLeft: 1, horizon: 3 });
-  assert.equal(afterN35.unlocked.at(-1), "N36", "recadrage : la fenêtre s'arrête au dernier niveau");
-  assert.ok(afterN35.unlocked.length - stNearEnd.unlocked.length >= 1, "au moins N36");
-  assert.ok(afterN35.unlocked.length - stNearEnd.unlocked.length <= 1, "pas de dérive au-delà du catalogue");
+  assert.equal(afterN35.unlocked.at(-1), "N36", "recadrage : la fenêtre s'arrête au couronnement N36");
+  assert.ok(afterN35.unlocked.length - stNearEnd.unlocked.length >= 1, "au moins un déblocage");
+  assert.ok(afterN35.unlocked.length - stNearEnd.unlocked.length <= 3, "pas de dérive au-delà du catalogue");
 });
 
 // ---------------------------------------------------------------------------

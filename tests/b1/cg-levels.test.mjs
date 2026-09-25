@@ -83,18 +83,26 @@ const CG = {
   N34: { minMovesGe: 2, finalsGe: 8, divUsed: true, chainDepthGe: 2, postStatesGe: 15 },
   N35: { minMovesGe: 2, finalsGe: 3, routesGe: 3, divUsed: true, chainAll: true, chainDepthGe: 2 },
   N36: { minMovesGe: 2, finalsGe: 8, divUsed: true, chainDepthGe: 2, chainAll: true, postStatesGe: 30 },
+  N37: { minMoves: 3, routesGe: 6, chainDepthGe: 2, divUsed: true },
+  N38: { minMoves: 3, routesGe: 2, finalsGe: 2, chainDepthGe: 2, divUsed: true },
+  N39: { minMoves: 3, chainDepthGe: 2, divUsed: true },
+  N40: { minMoves: 3, routesGe: 2, finalsGe: 2, chainDepthGe: 2, divUsed: true },
+  N41: { minMoves: 3, finalsGe: 2, chainDepthGe: 2, divUsed: true },
 };
 
-test("CG — LADDER : exactement N1..N36, chaque monde peuplé, ids ordonnés", () => {
-  assert.deepEqual(LADDER.map((l) => l.id), Array.from({ length: 36 }, (_, i) => `N${i + 1}`));
+test("CG — LADDER : 41 niveaux en ordre pédagogique (enrichissement M9), chaque monde peuplé", () => {
+  assert.deepEqual(
+    LADDER.map((l) => l.id),
+    ["N1","N2","N3","N4","N5","N6","N7","N8","N9","N10","N11","N12","N13","N14","N15","N16","N17","N18","N19","N20","N21","N22","N23","N24","N37","N25","N26","N27","N38","N28","N29","N39","N30","N31","N32","N33","N34","N35","N40","N41","N36"]
+  );
   const perWorld = Object.fromEntries(WORLDS.map((w) => [w.id, LADDER.filter((l) => l.world === w.id).map((l) => l.id)]));
   assert.deepEqual(perWorld, {
     W1: ["N1", "N2", "N3", "N17", "N18"],
     W2: ["N4", "N7", "N12", "N19", "N20", "N21"],
     W3: ["N5", "N8", "N13", "N22", "N23", "N24"],
-    W4: ["N9", "N14", "N25", "N26", "N27"],
-    W5: ["N6", "N10", "N11", "N28", "N29", "N30"],
-    W6: ["N15", "N16", "N31", "N32", "N33", "N34", "N35", "N36"],
+    W4: ["N9", "N14", "N37", "N25", "N26", "N27", "N38"],
+    W5: ["N6", "N10", "N11", "N28", "N29", "N39", "N30"],
+    W6: ["N15", "N16", "N31", "N32", "N33", "N34", "N35", "N40", "N41", "N36"],
   });
   for (const l of LADDER) {
     assert.ok(Number.parseInt(l.id.slice(1)) >= 1);

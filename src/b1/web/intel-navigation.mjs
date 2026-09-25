@@ -39,7 +39,9 @@ function makeClock() {
 }
 
 const DIFFICULTY = () =>
-  Object.fromEntries(LADDER.map((l) => [l.id, { index: Number(Number(l.id.slice(1))) || l.id.charCodeAt(0) }]));
+  Object.fromEntries(
+    LADDER.map((l, i) => [l.id, { index: i + 1 }])
+  );
 
 export function createIntelNavigation({ engine, storage, config = {}, metadata = null, clock } = {}) {
   if (!engine) throw new TypeError("createIntelNavigation : engine requis (injecté, jamais importé par intel)");
