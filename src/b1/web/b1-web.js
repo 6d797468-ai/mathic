@@ -1,7 +1,8 @@
 import { createSession, apply, evaluate, isWon, isLost, isBlocked, finalScore } from "../engine.mjs";
 import { replay } from "../replay.mjs";
 import { LADDER, WORLDS, worldOf, nextLevel } from "../levels.mjs";
-import { loadSave, saveNow, markCompleted, isUnlocked, hasWon, worldProgress } from "../save.mjs";
+import { loadSave, saveNow, markCompleted, isUnlocked, hasWon, worldProgress, pickStorage } from "../save.mjs";
+import { createIntelNavigation } from "./intel-navigation.mjs";
 
 const OP_SYMB = { "+": "+", "-": "−", "*": "×", "/": "÷" };
 
@@ -13,6 +14,13 @@ let activeWorld = worldOf(level.id);
 let state = createSession(level);
 let sel = { a: null, op: null, b: null };
 let pv = null;
+
+// Pont M7 — l'UI observe via l'intelligence réelle (Engine injecté par l'UI) ;
+// l'UI n'a AUCUNE autorité de progression hors la victoire UI standard.
+const nav = createIntelNavigation({
+  engine: { createSession, apply, evaluate, isWon, isLost, isBlocked },
+  storage: pickStorage(),
+});
 
 const boardEl = $("board");
 
@@ -98,6 +106,7 @@ function refreshPreview() {
   res.className = "slot res-slot" + (targetHit ? " ok target" : " ok");
   extra.textContent = `+${ev.delta}` + (ev.chainRun ? ` · chaîne +${ev.chainBonus}` : "") + (targetHit ? " · objectif !" : "");
   commit.disabled = false;
+  nav.preview(act);
   log({ level: level.id, kind: "preview", action: act, result: ev.result, delta: ev.delta, chainRun: ev.chainRun, targetHit });
 }
 
@@ -220,6 +229,7 @@ function render() {
 function persistVictory(nxt) {
   const score = finalScore(nxt);
   save = saveNow(markCompleted(save, level.id, { score, movesLeft: nxt.movesLeft }));
+  nav.finishLevel({ won: true, score, movesLeft: nxt.movesLeft });
   log({ level: level.id, kind: "completed", score, movesLeft: nxt.movesLeft, unlocked: save.unlocked.length });
 }
 
@@ -299,6 +309,7 @@ function commitAction() {
   state = nxt;
   sel = { a: null, op: null, b: null };
   pv = null;
+  nav.commit(act);
   if (nxt.won) persistVictory(nxt);
   render();
 }
@@ -332,8 +343,9 @@ function renderOverlay() {
       ptext = `Score ${score} (objectif +10) · coups restants ${state.movesLeft}`;
     }
     buttons = `<button id="ov-again">Rejouer</button>`;
-    const nxt = nextLevel(level.id);
-    if (nxt && (isUnlocked(save, nxt.id) || hasWon(save, nxt.id))) {
+    const decision = nav.decideNext();
+    const targetId = decision ? decision.nextLevel : (nextLevel(level.id)?.id ?? null);
+    if (targetId && (isUnlocked(save, targetId) || hasWon(save, targetId))) {
       buttons += `<button id="ov-next" class="ghost">Niveau suivant</button>`;
     }
   } else if (isLost(state)) {
@@ -355,8 +367,9 @@ function renderOverlay() {
   const next = card.querySelector("#ov-next");
   if (next) {
     next.addEventListener("click", () => {
-      const n = nextLevel(level.id);
-      if (n) switchLevel(n.id);
+      const decision = nav.decideNext();
+      const n = decision && decision.nextLevel ? decision.nextLevel : (nextLevel(level.id)?.id ?? null);
+      if (n) switchLevel(n);
     });
   }
   overlay.classList.remove("hidden");
@@ -368,6 +381,7 @@ function switchLevel(id) {
     log({ level: id, kind: "locked" });
     return;
   }
+  save = loadSave();
   log({ level: id, kind: "switch" });
   activeWorld = worldOf(id);
   reset(id);
@@ -376,6 +390,7 @@ function switchLevel(id) {
 function reset(id) {
   level = LADDER.find((l) => l.id === id) ?? LADDER[0];
   state = createSession(level);
+  nav.beginLevel(level);
   sel = { a: null, op: null, b: null };
   pv = null;
   setStatus("");
@@ -423,6 +438,7 @@ $("undo").addEventListener("click", () => {
   const undoAction = state.trace[state.trace.length - 1];
   log({ level: level.id, kind: "undo", undone: undoAction });
   state = replayFromTrace(state.trace.slice(0, -1));
+  nav.undo();
   sel = { a: null, op: null, b: null };
   pv = null;
   setStatus("Coup annulé (rejoué depuis la trace).", "hint");
@@ -431,7 +447,9 @@ $("undo").addEventListener("click", () => {
 
 $("restart").addEventListener("click", () => {
   log({ level: level.id, kind: "restart" });
+  nav.restart();
   reset(level.id);
 });
 
+nav.beginLevel(level);
 render();
