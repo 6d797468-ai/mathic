@@ -11,6 +11,9 @@ import { createGrimoire } from "../grimoire.mjs";
 import { createGrimoireAssembly } from "../engines.mjs";
 import { createKnowledgeStore } from "../../atelier/knowledge.mjs";
 import { guardianFragments, guardianRules } from "../../atelier/symbiote.mjs";
+import { createSaga } from "../saga.mjs";
+import { solve as solveB1 } from "../../b1/solver.mjs";
+import { loadSave, pickStorage } from "../../b1/save.mjs";
 
 const $ = (id) => document.getElementById(id);
 
@@ -34,11 +37,17 @@ const knowledge = createKnowledgeStore(storageBackend, {
 
 const grimoire = createGrimoire(createGrimoireAssembly({ storage: storageBackend, knowledgeStore: knowledge }));
 
+const saga = createSaga({
+  save: () => loadSave(storageBackend ?? pickStorage()),
+  solve: solveB1,
+  knowledge: () => ({ unlockedFragments: knowledge ? knowledge.listFragments() : [] }),
+});
+
 // ---------------------------------------------------------------------------
 // Vues — chaque écran de la machine a SON conteneur ; rien d'autre ne s'affiche
 // ---------------------------------------------------------------------------
 
-const VUES = ["vue-index", "vue-session", "vue-resolu", "vue-echec"];
+const VUES = ["vue-saga", "vue-index", "vue-session", "vue-resolu", "vue-echec"];
 
 function showVue(id) {
   for (const v of VUES) $(v).hidden = v !== id;
@@ -87,6 +96,61 @@ function renderIndex() {
     familles.appendChild(div);
   }
   setStatus($("index-out"), `${levels.filter((l) => l.state !== "LOCKED").length} pages ouvertes sur ${levels.length}.`);
+  renderFooter();
+}
+
+function starsBadge(count) {
+  return "★".repeat(count) + "☆".repeat(Math.max(0, 3 - count));
+}
+
+function renderSagaView() {
+  showVue("vue-saga");
+  const v = saga.view();
+  const entries = $("saga-entries");
+  entries.innerHTML = "";
+  for (const ch of v.chapters) {
+    const card = document.createElement("div");
+     card.className = "saga-chapter";
+    card.dataset.chapterId = ch.id;
+    const head = document.createElement("div");
+    head.className = "saga-chapter-head";
+    const title = document.createElement("h3");
+    title.textContent = ch.name;
+    const sub = document.createElement("div");
+    sub.className = "saga-chapter-sub";
+    sub.textContent = `${ch.done}\u2043${ch.levels.length} scellées  \u2605 ${ch.starsEarned}/${ch.starsPossible}  (→ ${ch.thresholdMet ? "ouvert" : "à sceller"})`;
+    head.append(title, sub);
+    const grid = document.createElement("div");
+    grid.className = "saga-levels";
+    for (const lv of ch.levels) {
+      const b = document.createElement("button");
+      b.type = "button";
+       b.className = "saga-level " + lv.state.toLowerCase();
+      b.dataset.levelId = lv.id;
+      b.disabled = lv.state === "LOCKED";
+      const name = document.createElement("span");
+      name.className = "saga-lv-name";
+      name.textContent = lv.id;
+      const stars = document.createElement("span");
+      stars.className = "saga-lv-stars";
+      stars.textContent = starsBadge(lv.stars);
+      b.append(name, stars);
+      b.addEventListener("click", () => {
+        if (lv.state !== "LOCKED") startLevel("b1", lv.id);
+      });
+      grid.appendChild(b);
+    }
+    card.append(head, grid);
+    entries.appendChild(card);
+  }
+  const lab = document.createElement("div");
+  lab.className = "saga-lab";
+  lab.textContent = "Laboratoire V5 — hors hiérarchie des étoiles (aucun verrou, aucune étoile)";
+  entries.appendChild(lab);
+  setStatus(
+    $("saga-out"),
+    `${v.totals.starsEarned}\u2043${v.totals.starsPossible} étoiles  \u2022  ${v.totals.completed}\u2043${v.totals.levelsTotal} pages scellées  \u2022  page courante : ${v.current?.levelId ?? "—"} (${v.current?.worldId ?? "—"})  \u2022  ${v.knowledge ? v.knowledge.fragments : grimoire.readSavoir().length} fragments de savoir`
+  );
   renderFooter();
 }
 
@@ -281,6 +345,13 @@ async function flushKnowledge() {
 
 $("btn-index").addEventListener("click", () => {
   grimoire.toIndex();
+  renderIndex();
+});
+$("btn-saga").addEventListener("click", () => {
+  renderSagaView();
+});
+$("btn-saga-back").addEventListener("click", () => {
+  showVue("vue-index");
   renderIndex();
 });
 $("btn-retour-index").addEventListener("click", () => {

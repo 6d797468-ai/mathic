@@ -20,8 +20,9 @@
 
       <!-- ======================= VUE : INDEX ======================= -->
       <section class="panel" id="vue-index" hidden>
-        <h2>Sommaire</h2>
-        <p class="hint">« Les pages scellées attendent. Les pages ouvertes racontent. »</p>
+       <h2>Sommaire</h2>
+       <button id="btn-saga" type="button" class="secondary" style="margin: 4px 0 12px">📖 Carte du Grimoire (étoiles)</button>
+       <p class="hint">« Les pages scellées attendent. Les pages ouvertes racontent. »</p>
         <div id="familles"></div>
         <p id="index-out" class="status mono" aria-live="polite"></p>
       </section>
@@ -74,7 +75,17 @@
         </div>
       </section>
 
-      <footer class="grimoire-foot mono">
+       <section class="panel" id="vue-saga" hidden>
+         <div class="session-head">
+           <button id="btn-saga-back" type="button" class="secondary">▦ Sommaire</button>
+           <h2>Saga du Grimoire</h2>
+           <span id="session-engine" class="engine-tag mono"></span>
+         </div>
+         <div id="saga-entries"></div>
+         <p id="saga-out" class="status mono" aria-live="polite"></p>
+       </section>
+
+       <footer class="grimoire-foot mono">
         <span id="foot-save">—</span> · <span id="foot-know">—</span> · hors-ligne
       </footer>
     </main>

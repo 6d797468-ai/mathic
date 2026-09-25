@@ -299,6 +299,93 @@ button:disabled {
 
 /* ---------- Pied ---------- */
 
+/* ---------- Pied ---------- */
+
+.saga-chapter {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.saga-chapter-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.saga-chapter-head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.saga-chapter-sub {
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.saga-levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+}
+
+.saga-level {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 8px 6px;
+  text-align: center;
+  min-height: 56px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 0.76rem;
+}
+
+.saga-level.mastered {
+  border-color: var(--gold);
+  background: #1d2140;
+}
+
+.saga-level.open {
+  border-color: var(--ok);
+}
+
+.saga-level.locked {
+  border-color: var(--sealed);
+  background: repeating-linear-gradient(45deg, var(--panel-2), var(--panel-2) 5px, #141730 5px, #141730 10px);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.saga-lv-name {
+  display: block;
+  font-weight: 700;
+  color: var(--gold);
+  font-size: 0.82rem;
+}
+
+.saga-lv-stars {
+  display: block;
+  color: var(--gold);
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+}
+
+.saga-lab {
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+  margin-top: 6px;
+  font-style: italic;
+}
+
 .grimoire-foot {
   text-align: center;
   color: var(--ink-dim);

@@ -26,7 +26,7 @@
 // AFFICHÉS : le verrouillage réel reste celui de save.mjs (fenêtre M8).
 // ---------------------------------------------------------------------------
 
-import { LADDER, WORLDS } from "../b1/levels.mjs";
+import { LADDER, WORLDS, worldOf } from "../b1/levels.mjs";
 import { solve as solveB1 } from "../b1/solver.mjs";
 
 // Seuil d'un chapitre = ⭐ requises = min(6, 2 × nombreDeNiveauxDuChapitre).
@@ -174,6 +174,7 @@ export function createSaga({ save, knowledge = null, ladder = LADDER, worlds = W
     return {
       totals,
       chapters,
+      current: { levelId: st?.current ?? null, worldId: st?.current ? worldOf(st.current) : null },
       // Lab V5 : rubrique hors hiérarchie — aucune étoile, aucun seuil.
       lab: { engine: "v5", stars: null, threshold: null, note: "atelier — hors hiérarchie (décision v1.1)" },
       knowledge: knowledge
