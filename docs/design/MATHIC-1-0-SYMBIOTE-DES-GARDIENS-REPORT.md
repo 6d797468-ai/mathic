@@ -1,9 +1,10 @@
 # MATHIC 1.0 — Rapport de mandat : Symbiote des Gardiens (MISSION 16)
 
 **Référence** : MISSION 16 — `SYMBIOTE DES GARDIENS` · Architecture : `MATHIC-1-0-SYMBIOTE-DES-GARDIENS.md`  
-**Statut** : IMPLÉMENTÉ, TESTÉ, VÉRIFIÉ — GO ARCHITECTURE / LIVRAISON À VERROUILLER (commit + preuve E6 navigateur/PWA/APK restants).  
+**Statut** : IMPLÉMENTÉ, TESTÉ, VÉRIFIÉ, PROUVÉ (E5 logique + E6 navigateur). Publication : `00bf921` (seam M15) et `17b34ae` (M16) poussés sur `origin/kali/v5-gameplay-lab`. Restant hors périmètre prouvé : APK Android (non exécuté).  
 **Baseline** : M15 = `e9e1efa` · **Suite de tests** : 419 PASS (0 FAIL, 0 SKIPPED).  
-**Audit indépendant (2026-09-25)** : exécution de contrôle `npm test` 419/419 PASS, `npm run build` et `npm run build:atelier` OK, `git diff --check` CLEAN. Risques relevés : R-01 commit (P1, ce dépôt), R-02 surqualification E6 du présent rapport (P2, corrigée par ce statut), R-03 sémantique budget du backtracker (P2, documentée au §5 ci-dessous), R-04 libellé SYM-16 (P2, corrigé dans le test : la garantie de non-triche est architecturale, pas une encapsulation JS de `session.spec`).
+**Audit indépendant (2026-09-25)** : exécution de contrôle `npm test` 419/419 PASS, `npm run build` et `npm run build:atelier` OK, `git diff --check` CLEAN. Risques relevés : R-01 commit (P1, **fermé** : commits publiés), R-02 surqualification E6 du présent rapport (P2, **corrigée**), R-03 sémantique budget du backtracker (P2, **corrigée** au §5), R-04 libellé SYM-16 (P2, **corrigé** dans le test : la garantie de non-triche est architecturale, pas une encapsulation JS de `session.spec`).
+**Preuve E6 (2026-09-25, Chrome 153 headless, vrai DOM + vrai localStorage)** : scénario complet compose → play → solved → seal → fragments → reload exécuté sur `dist-atelier` — **18/18 assertions PASS, 0 erreur console**, 5 fragments restaurés depuis `mathic.knowledge.v1` après reload sans doublon. Harnais versionné : `lab/e6-browser-proof.mjs` (CDP brut, zéro dépendance) ; artefacts : `lab/e6-evidence/` (captures + `e6-result.json`). La preuve E6 a **détecté une régression réelle invisible des tests unitaires** — le badge Résonance n'était pas rafraîchi après forge/résolution — corrigée dans `atelier.js` (`updateResonance()` après `SYMBIOTE_COMPOSED` et `CHALLENGE_COMPLETED`), non-régression re-vérifiée 419/419.
 
 ---
 

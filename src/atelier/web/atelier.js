@@ -176,6 +176,7 @@ els.btnSymbioteCompose.addEventListener("click", () => {
   }
   observe({ t: "SYMBIOTE_COMPOSED", guardians: gList });
   initCtrl(v.spec, `Symbiote : ${gList.join(" + ")}`);
+  updateResonance(); // le badge reflète BOUND (|G|≥2) dès la forge, pas au clic suivant
   els.symbioteOut.textContent = "Défi Symbiote forgé. La pierre résonne.";
   els.symbioteOut.className = "status mono ok";
   document.getElementById("board").scrollIntoView({ behavior: "smooth" });
@@ -320,6 +321,7 @@ function renderBoard() {
   if (solved && !wasSolved) {
     wasSolved = true;
     observe({ t: "CHALLENGE_COMPLETED", moves });
+    updateResonance(); // COMPOSED → CHALLENGE_COMPLETED : le badge passe à RESONANT
   }
   const reserveTxt = Object.entries(state.reserve)
     .filter(([, n]) => n > 0)
