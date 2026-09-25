@@ -72,6 +72,23 @@ export function createGrimoire({ engines, progression, knowledge = null }) {
     return view();
   }
 
+  // toIndex : quitter l'écran courant pour le sommaire (la session en cours est
+  // abandonnée — le Grimoire n'abrite pas de reprise de partie, I-3 : aucune
+  // règle de pause inventée). Depuis INDEX/CLOSED : no-op propre.
+  function toIndex() {
+    if (st.screen === "INDEX") return view();
+    const wasPlaying = st.screen === "PLAYING";
+    st.screen = "INDEX";
+    st.sessionId += 1; // nouvelle identité de session : l'ancienne n'est plus adressable
+    st.engine = null;
+    st.levelId = null;
+    st.session = null;
+    st.terminal = null;
+    st.rewarded = false;
+    if (wasPlaying) emit("SESSION_ABANDONED");
+    return view();
+  }
+
   // --- INDEX : lecture pure du catalogue + progression -----------------------
 
   function listLevels() {
@@ -287,7 +304,7 @@ export function createGrimoire({ engines, progression, knowledge = null }) {
   }
 
   return {
-    open, close,
+    open, close, toIndex,
     listLevels, levelEntry, canPlay,
     start, legalMoves, play, status,
     reward, next,

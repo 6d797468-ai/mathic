@@ -145,6 +145,25 @@ test("GR-04 : start — rejets par contrat (moteur, niveau, verrou, non-jouable,
   assert.equal(g.start("b1", "L1").reason, "CLOSED_OR_BUSY"); // déjà en session
 });
 
+test("GR-05b : toIndex — abandon de session propre, session non adressable ensuite", () => {
+  const g = createGrimoire({ engines: { b1: makeSeam({ winAt: 5 }) }, progression: makeProgression() });
+  g.open();
+  g.start("b1", "L1");
+  const sid = g.status().sessionId;
+  g.play({ id: "MOVE_A" });
+  g.toIndex();
+  assert.equal(g.snapshot().screen, "INDEX");
+  assert.ok(g.takeEvents().some((e) => e.t === "SESSION_ABANDONED"));
+  // plus de session : play/next/reward refusent, l'ancienne sessionId est morte
+  assert.equal(g.play({ id: "MOVE_A" }).reason, "NOT_PLAYING");
+  assert.equal(g.status().session, undefined);
+  assert.notEqual(g.status().sessionId, sid);
+  // depuis INDEX : no-op propre (pas d'event parasite)
+  const evs = g.takeEvents().length;
+  g.toIndex();
+  assert.equal(g.takeEvents().length, evs);
+});
+
 test("GR-05 : listLevels ne mute jamais la progression (lecture pure)", () => {
   const prog = makeProgression();
   const g = createGrimoire({ engines: { b1: makeSeam() }, progression: prog });

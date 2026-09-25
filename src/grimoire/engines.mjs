@@ -98,12 +98,16 @@ export function createB1Seam({ progression } = {}) {
     expose(state) {
       return {
         levelId: state.level.id,
+        rows: state.board.rows,
+        cols: state.board.cols,
         target: state.level.target,
         maxMoves: state.level.maxMoves,
         movesLeft: state.movesLeft,
         score: state.score,
         won: state.won,
-        cells: state.board.cells.map((c) => (c === null ? null : { kind: c.kind, v: c.v, result: !!c.result })),
+        // cells indexés par position — l'UI peut rendre la grille sans connaître
+        // la représentation interne du moteur (view-model, pas règle).
+        cells: state.board.cells.map((c) => (c === null ? null : { id: c.id, kind: c.kind, v: c.v, result: !!c.result })),
       };
     },
     finalize(state) {

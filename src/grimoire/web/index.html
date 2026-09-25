@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b0e1a" />
+    <title>MATHIC 1.0 — Grimoire</title>
+    <link rel="stylesheet" href="./grimoire.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>MATHIC <span class="grimoire-badge">▦</span></h1>
+        <p class="name">Grimoire des Mondes</p>
+        <p class="tagline">Chaque page est une pierre. Chaque pierre obéit à une loi.</p>
+      </header>
+
+      <!-- ======================= VUE : INDEX ======================= -->
+      <section class="panel" id="vue-index" hidden>
+        <h2>Sommaire</h2>
+        <p class="hint">« Les pages scellées attendent. Les pages ouvertes racontent. »</p>
+        <div id="familles"></div>
+        <p id="index-out" class="status mono" aria-live="polite"></p>
+      </section>
+
+      <!-- ======================= VUE : SESSION ======================= -->
+      <section class="panel" id="vue-session" hidden>
+        <div class="session-head">
+          <button id="btn-index" type="button" class="secondary">▦ Sommaire</button>
+          <h2 id="session-title">—</h2>
+          <span id="session-engine" class="engine-tag mono"></span>
+        </div>
+
+        <div id="board" class="board" aria-label="plateau de jeu"></div>
+
+        <div id="hud" class="hud">
+          <div class="hud-item">Cible <b id="hud-target">–</b></div>
+          <div class="hud-item">Coups <b id="hud-moves">–</b></div>
+          <div class="hud-item" id="hud-score-item">Score <b id="hud-score">0</b></div>
+        </div>
+
+        <p class="hint" id="session-hint">Choisis une action proposée par la loi.</p>
+        <p id="session-out" class="status mono" aria-live="polite"></p>
+      </section>
+
+      <!-- ======================= VUE : RÉSOLUTION ======================= -->
+      <section class="panel" id="vue-resolu" hidden>
+        <h2 id="resolu-titre">—</h2>
+        <p class="hint" id="resolu-lore"></p>
+        <div class="hud">
+          <div class="hud-item">Score final <b id="resolu-score">–</b></div>
+          <div class="hud-item">Débloqué <b id="resolu-unlocked">–</b></div>
+          <div class="hud-item">Savoir <b id="resolu-savoir">–</b></div>
+        </div>
+        <p id="resolu-out" class="status mono" aria-live="polite"></p>
+        <div class="row">
+          <button id="btn-suivant" type="button">✦ Tourner la page</button>
+          <button id="btn-rejouer" type="button" class="secondary">↺ Rejouer cette page</button>
+          <button id="btn-retour-index" type="button" class="secondary">▦ Sommaire</button>
+        </div>
+      </section>
+
+      <!-- ======================= VUE : ÉCHEC ======================= -->
+      <section class="panel" id="vue-echec" hidden>
+        <h2>Page non scellée</h2>
+        <p class="hint">« La pierre refuse. Ce n'est pas un échec — c'est une bifurcation à observer. »</p>
+        <p id="echec-out" class="status mono" aria-live="polite"></p>
+        <div class="row">
+          <button id="btn-echec-rejouer" type="button">↺ Recommencer la page</button>
+          <button id="btn-echec-index" type="button" class="secondary">▦ Sommaire</button>
+        </div>
+      </section>
+
+      <footer class="grimoire-foot mono">
+        <span id="foot-save">—</span> · <span id="foot-know">—</span> · hors-ligne
+      </footer>
+    </main>
+    <script type="module" src="./grimoire.js"></script>
+  </body>
+</html>
