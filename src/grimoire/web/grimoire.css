@@ -392,3 +392,61 @@ button:disabled {
   font-size: 0.72rem;
   margin-top: 26px;
 }
+
+/* ---------- Momo / Maggeek : coaching (M19, lecture seule) ---------- */
+
+.hint-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0 4px;
+}
+
+.momo-panel {
+  background: var(--panel-2);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin: 8px 0 4px;
+  list-style: none;
+}
+
+.momo-panel[hidden] {
+  display: none;
+}
+
+.momo-panel:empty {
+  display: none;
+}
+
+.momo-hint-line {
+  font-size: 0.82rem;
+  color: var(--ink);
+  padding: 2px 0;
+}
+
+.momo-hint-line::before {
+  content: "⋯ ";
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.momo-fact {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.68rem;
+  color: var(--ink-dim);
+  margin-left: 6px;
+}
+
+.momo-verified {
+  border-color: var(--ok);
+}
+
+.momo-panel.momo-verified {
+  border-style: solid;
+}
+
+.momo-fallback {
+  color: var(--ink-dim);
+  font-style: italic;
+}

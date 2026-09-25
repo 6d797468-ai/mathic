@@ -14,6 +14,10 @@ import { guardianFragments, guardianRules } from "../../atelier/symbiote.mjs";
 import { createSaga } from "../saga.mjs";
 import { solve as solveB1 } from "../../b1/solver.mjs";
 import { loadSave, pickStorage } from "../../b1/save.mjs";
+import { createMaggeek } from "../../intel/maggeek.mjs";
+import { createMomo, momoMode } from "../../intel/momo.mjs";
+import { solverFacts } from "../../intel/facts.mjs";
+import { ladderBy } from "../../b1/levels.mjs";
 
 const $ = (id) => document.getElementById(id);
 
@@ -42,6 +46,9 @@ const saga = createSaga({
   solve: solveB1,
   knowledge: () => ({ unlockedFragments: knowledge ? knowledge.listFragments() : [] }),
 });
+
+const maggeek = createMaggeek({ facts: solverFacts });
+const momo = createMomo({ coach: maggeek, provider: null, mode: momoMode(typeof window !== "undefined" ? window : undefined) });
 
 // ---------------------------------------------------------------------------
 // Vues — chaque écran de la machine a SON conteneur ; rien d'autre ne s'affiche
@@ -186,6 +193,44 @@ function renderSession() {
   $("hud-score").textContent = vm.score ?? 0;
 
   renderFooter();
+}
+
+function renderHint() {
+  const out = $("momo-out");
+  if (!out) return;
+  const st = grimoire.status();
+  if (st.screen !== "PLAYING") {
+    out.innerHTML = "";
+    out.hidden = true;
+    return;
+  }
+  const level = ladderBy(st.levelId);
+  let record = null;
+  try {
+    record = loadSave(storageBackend ?? pickStorage()).completed?.[st.levelId] ?? null;
+  } catch {
+    record = null;
+  }
+  const h = momo.hint({ levelId: st.levelId, level, record });
+  out.innerHTML = "";
+  if (!h || h.abstain || !h.lines || !h.lines.length) {
+    out.textContent = (h && h.text) || "";
+    out.hidden = !(h && h.text);
+    return;
+  }
+  out.className = "momo-panel " + (h.confidence === "verified" ? "momo-verified" : "momo-fallback");
+  out.hidden = false;
+  for (const line of h.lines) {
+    const li = document.createElement("li");
+    li.className = "momo-hint-line";
+    li.dataset.solverFactId = line.solverFactId;
+    li.textContent = line.text;
+    const fact = document.createElement("span");
+    fact.className = "momo-fact";
+    fact.textContent = `[${line.solverFactId}]`;
+    li.appendChild(fact);
+    out.appendChild(li);
+  }
 }
 
 function renderB1Board(vm) {
@@ -354,6 +399,12 @@ $("btn-saga-back").addEventListener("click", () => {
   showVue("vue-index");
   renderIndex();
 });
+if ($("btn-hint")) {
+  $("btn-hint").addEventListener("click", () => {
+    renderHint();
+    setStatus($("session-out"), "Momo : indice dérivé des faits solver — aucune règle inventée.", "ok");
+  });
+}
 $("btn-retour-index").addEventListener("click", () => {
   grimoire.toIndex();
   renderIndex();
