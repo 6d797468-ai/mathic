@@ -1,9 +1,10 @@
 // ============================================================================
-// MATHIC — Atelier Astral (UI M12 + M13)
-// Rôle : surface produit autour du moteur V5 + Sceau de Défi + Sablier de Chronos.
-// Le moteur reste souverain : toute interaction passe par le ReplayController
-// (lui-même adossé à replay(spec, events)). L'état affiché à la position k est
-// TOUJOURS celui du replay réel — jamais un état reconstruit par l'UI.
+// MATHIC — Atelier Astral (UI M12 + M13 + M23 audio/PWA)
+// ----------------------------------------------------------------------------
+// M23 : couche audio Atelier (ASMR/mécanique) + PWA installable.
+//   - atelier-audio.mjs : sons synthétiques via Web Audio API (aucun asset).
+//   - PWA : manifest webmanifest + SW cache-first + SW registration.
+// Le moteur reste souverain : toute interaction passe par le ReplayController.
 // Aucun accès direct à l'Engine, aucune modification de Save/Policy/Progression.
 // ============================================================================
 
@@ -32,6 +33,14 @@ import {
   guardianRules,
   SYMBIOTE_BASES,
 } from "../symbiote.mjs";
+import { createAtelierAudio } from "./atelier-audio.mjs";
+
+const audio = createAtelierAudio();
+window.addEventListener("pointerdown", () => audio.unlock(), { once: true });
+
+if ("serviceWorker" in window.navigator) {
+  window.navigator.serviceWorker.register("./sw.js").catch(() => {});
+}
 
 const PRESETS = {
   SUM2X2: {
@@ -175,6 +184,7 @@ els.btnSymbioteCompose.addEventListener("click", () => {
     return;
   }
   observe({ t: "SYMBIOTE_COMPOSED", guardians: gList });
+  audio.playForge();
   initCtrl(v.spec, `Symbiote : ${gList.join(" + ")}`);
   updateResonance(); // le badge reflète BOUND (|G|≥2) dès la forge, pas au clic suivant
   els.symbioteOut.textContent = "Défi Symbiote forgé. La pierre résonne.";
@@ -321,6 +331,7 @@ function renderBoard() {
   if (solved && !wasSolved) {
     wasSolved = true;
     observe({ t: "CHALLENGE_COMPLETED", moves });
+    audio.playVictory();
     updateResonance(); // COMPOSED → CHALLENGE_COMPLETED : le badge passe à RESONANT
   }
   const reserveTxt = Object.entries(state.reserve)
@@ -355,9 +366,11 @@ function place({ v, r, c }) {
   if (!ctrl) return;
   const r0 = ctrl.move({ value: +v, r: +r, c: +c });
   if (r0.ok) {
+    audio.playPlace();
     renderBoard();
     if (!ctrl.atEnd()) setStatus("Branche créée — la trace a reflué.", "ok");
   } else {
+    audio.playReject();
     setStatus("Mouvement refusé par le moteur (aucune transition).", "err");
   }
 }
@@ -396,6 +409,7 @@ els.btnBack.addEventListener("click", () => {
   try {
     ctrl.back(1);
     observe({ t: "REWIND_USED", depth: 1, source: "back" });
+    audio.playRewind();
     setStatus("Un cran remonté. Observe le point de bascule.", "ok");
     renderBoard();
   } catch (err) {
@@ -408,6 +422,7 @@ els.btnStart.addEventListener("click", () => {
   try {
     ctrl.backToStart();
     observe({ t: "REWIND_USED", depth: ctrl.cursor().position, source: "backToStart" });
+    audio.playRewind();
     setStatus("Retour à l'origine de la trace.", "ok");
     renderBoard();
   } catch (err) {
@@ -430,6 +445,7 @@ els.btnUndo.addEventListener("click", () => {
   if (!ctrl) return;
   const u = ctrl.undo();
   if (u.ok) {
+    audio.playRewind();
     observe({ t: "UNDO_USED", position: u.position });
     setStatus("Dernier coup tronqué de la trace (branche).", "ok");
     renderBoard();
@@ -454,6 +470,7 @@ function fmtLine(l) {
 }
 
 function oculusOpen() {
+  audio.playOculus();
   els.oculus.hidden = false;
 }
 function oculusClose() {
@@ -540,7 +557,8 @@ els.btnSeal.addEventListener("click", () => {
   try {
     const spec = ctrl.spec;
     const seal = encodeSeal(spec);
-    observe({ t: "SEAL_CREATED", length: seal.length });
+     observe({ t: "SEAL_CREATED", length: seal.length });
+    audio.playSeal();
     els.sealOut.textContent = seal;
     els.btnCopy.disabled = seal.length === 0;
     setStatus(`Sceau forgé (${seal.length} caractères). Copie-le, partout, hors ligne.`, "ok");
