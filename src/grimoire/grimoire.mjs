@@ -141,7 +141,10 @@ export function createGrimoire({ engines, progression, knowledge = null }) {
     if (engine === "b1" && !progression.isUnlocked(id)) return { ok: false, reason: "LEVEL_LOCKED" };
 
     const mounted = seam.mount(entry);
-    if (!mounted || !mounted.session) return { ok: false, reason: "MOUNT_FAILED" };
+    if (!mounted || !mounted.session) {
+      const reason = mounted?.reason ?? "MOUNT_FAILED";
+      return { ok: false, reason };
+    }
 
     st.sessionId += 1;
     st.engine = engine;

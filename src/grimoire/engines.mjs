@@ -41,6 +41,7 @@ import {
   getState,
   canonical,
 } from "../v5/rules/engine.mjs";
+import { admitSpec } from "../v5/rules/admission.mjs";
 
 // ---------------------------------------------------------------------------
 // Façade progression — l'unique passerelle vers mathic.save.v1 (via save.mjs)
@@ -184,6 +185,11 @@ export function createV5Seam() {
       return LAB_CATALOG.map((e) => ({ id: e.id, title: e.title, playable: e.playable, spec: e.spec }));
     },
     mount(entry) {
+      // Gate d'admission V5 — M29
+      const admission = admitSpec(entry.spec);
+      if (admission.outcome !== "ACCEPT") {
+        return { ok: false, reason: admission.cause, admission };
+      }
       return { session: v5CreateSession(entry.spec) };
     },
     apply(state, cmd) {

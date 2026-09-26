@@ -127,6 +127,8 @@ export const UNSOLVABLE = "PROVEN_UNSOLVABLE";
 export const UNPROVEN = "UNPROVEN";
 export const UNSUPPORTED = "UNSUPPORTED";
 
+export const WITNESS_VERSION = 1;
+
 const DEFAULTS = Object.freeze({ maxDepth: 8, budget: 20000 });
 
 function unsupported(reason) {
