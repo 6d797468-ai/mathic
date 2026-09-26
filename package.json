@@ -18,7 +18,7 @@
     "simulate:adaptive": "node scripts/simulate-adaptive-progression.mjs",
     "gen:icons": "node scripts/gen-icons.mjs",
     "gen:android": "node scripts/generate-android-icons.mjs",
-    "build:android": "vite build && npx cap copy android",
+    "build:android": "npm run build:grimoire && npx cap copy android",
     "android:sync": "npx cap sync android"
   },
   "devDependencies": {
