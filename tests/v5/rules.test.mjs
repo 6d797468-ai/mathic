@@ -90,22 +90,46 @@ test("replay : les événements PLACE reproduisent l'état final (contrat)", () 
   assert.deepEqual(out[out.length - 1].grid, s.grid);
 });
 
-test("certify : SPEC somme 2×2 résolvable, minMoves fini, solution présente", () => {
+// ---------------------------------------------------------------------------
+// M28 · QUALIFICATION DE CES TROIS TESTS LEGACY
+//
+// Ils exercent `certify()`, qui porte desormais le statut LEGACY /
+// UNTRUSTED (voir l'en-tete de src/v5/rules/solver.mjs). Ils sont conserves
+// comme tests de non-regression DU LEGACY, et ne comptent pas comme preuve.
+//
+// Ce qui reste valable : la direction POSITIVE. Si `certify` repond
+// `solvable: true`, le puzzle est reellement resolvable — la generation de
+// transitions vient du moteur souverain. Les assertions ci-dessous sur
+// `solvable: true` restent donc exactes.
+//
+// Ce qui ne vaut RIEN : la direction NEGATIVE. `solvable: false` n'est pas
+// une preuve d'inexistence, car la recherche a pu etre tronquee sans que
+// `budgeted` ne le signale (M28-SOLVER-001). L'assertion correspondante est
+// donc explicitement marquee « non probante » : elle verifie le comportement
+// observe, pas une propriete mathématique.
+//
+// La preuve de solvabilite fait autorite dans
+// tests/v5/solvability-witness.test.mjs.
+// ---------------------------------------------------------------------------
+test("LEGACY certify : SPEC somme 2×2 résolvable, minMoves fini, solution présente", () => {
   const r = certify(SUM2X2, { maxDepth: 4, budget: 5000 });
   assert.equal(r.solvable, true);
   assert.ok(Number.isInteger(r.minMoves) && r.minMoves >= 2 && r.minMoves <= 4);
   assert.ok(r.solutions >= 1);
 });
 
-test("certify : spec tout-'+' incohérente refusée par quickReject puis insoluble", () => {
+test("LEGACY certify : spec tout-'+' incohérente refusée par quickReject puis insoluble", () => {
   const badSum = JSON.parse(JSON.stringify(SUM2X2));
   badSum.cols[1].target = 100;
   assert.equal(quickReject(badSum), true);
   const r = certify(badSum, { maxDepth: 4, budget: 5000 });
+  // NON PROBANT : verifie le comportement observe du legacy, PAS une
+  // inexistence. quickReject ci-dessus reste, lui, une preuve : il est
+  // structurel (somme des cibles des lignes != somme des cibles colonnes).
   assert.equal(r.solvable, false);
 });
 
-test("certify : résout l'exemple mixte ou réponde sans erreur", () => {
+test("LEGACY certify : résout l'exemple mixte ou réponde sans erreur", () => {
   const r = certify(MIXED2X2, { maxDepth: 6, budget: 5000 });
   assert.equal(typeof r.solvable, "boolean");
 });

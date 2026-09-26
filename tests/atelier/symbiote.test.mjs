@@ -336,6 +336,11 @@ test("SYM-15 : les 15 compositions de la Chambre 2×2 sont valides ET solvables"
     assert.equal(v.ok, true, `${g.join("+")} rejetée: ${v.reasons.join(" · ")}`);
     const ops = [...v.spec.rows.flatMap((r) => r.ops), ...v.spec.cols.flatMap((c) => c.ops)];
     assert.equal(new Set(ops).size, g.length, `${g.join("+")} doit porter ${g.length} lois distinctes`);
+    // M28 : `certify` est LEGACY / UNTRUSTED. L'assertion ci-dessous reste
+    // exacte car elle n'utilise que la direction POSITIVE de certify, qui est
+    // sound (transitions issues du moteur souverain). Elle ne constitue
+    // toutefois pas une preuve de solvabilite : la preuve rejouable fait
+    // autorite dans src/v5/rules/solvability-witness.mjs.
     const c = certify(v.spec, { maxDepth: 10, budget: 20000 });
     assert.equal(c.solvable, true, `${g.join("+")} insolvable`);
   }
