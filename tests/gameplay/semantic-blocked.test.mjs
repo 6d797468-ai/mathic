@@ -36,13 +36,15 @@ import { fileURLToPath } from "node:url";
 import { createSession, isSolved, canonical } from "../../src/v5/rules/engine.mjs";
 import { createIntent } from "../../src/gameplay/methods/intent.mjs";
 import { MethodRegistry } from "../../src/gameplay/methods/registry.mjs";
-import { registerFoundingMethods } from "../../src/gameplay/methods/catalog.mjs";
+import { registerFoundingMethods, methodRelation, METHOD_FACTORIZE } from "../../src/gameplay/methods/catalog.mjs";
 import { preview } from "../../src/gameplay/session/preview.mjs";
 import {
   prove,
   isSemanticallyProven,
   PROOF_SCOPE_PRIMITIVE_ONLY,
+  SEMANTIC_PROOF_UNPROVEN,
   SEMANTIC_STATUS_BLOCKED,
+  SEMANTIC_STATUS_UNPROVEN,
   SEMANTIC_PROOF_BLOCKED,
 } from "../../src/gameplay/proof/proof-engine.mjs";
 
@@ -98,7 +100,13 @@ function scatteredSpec() {
   };
 }
 
-function assertBlocked(res, label) {
+/**
+ * M27 a fait evoluer le statut : le temoin V5 statue désormais sur chaque cas
+ * au lieu de renvoyer un BLOCKED global. Les trois faux positifs du §3 de
+ * MATHIC-V6-M26-REPORT.md tombent tous en UNPROVEN, chacun avec une raison
+ * DIAGNOSTIQUE. C'est plus fort que le BLOCKED d'origine, et c'est verifie ici.
+ */
+function assertBlocked(res, label, reasonFragment) {
   assert.equal(res.valid, true, `${label} : la legalite primitive V5 doit rester acceptee`);
   assert.equal(
     res.methodSemanticsCertified,
@@ -106,14 +114,13 @@ function assertBlocked(res, label) {
     `${label} : NE DOIT PAS etre presente comme un certificat de Methode`
   );
   assert.equal(res.semantic.proven, false, `${label} : la postcondition ne doit pas etre declaree prouvee`);
-  assert.equal(res.semantic.status, SEMANTIC_STATUS_BLOCKED, `${label} : statut semantique attendu = BLOCKED`);
+  assert.equal(res.semantic.status, SEMANTIC_STATUS_UNPROVEN, `${label} : statut semantique attendu = UNPROVEN`);
   assert.equal(res.proofScope, PROOF_SCOPE_PRIMITIVE_ONLY, `${label} : portee attendue = primitive seulement`);
   assert.equal(isSemanticallyProven(res.proof), false, `${label} : isSemanticallyProven() doit rester false`);
   assert.ok(
-    res.semantic.reason.includes("evaluateLine"),
-    `${label} : la raison du blocage doit nommer l'API V5 manquante`
+    res.semantic.reason.includes(reasonFragment),
+    `${label} : raison attendue contenant ${JSON.stringify(reasonFragment)}, obtenue ${JSON.stringify(res.semantic.reason)}`
   );
-  assert.equal(res.semantic.blockedBy, "V5-SEMANTIC-WITNESS");
 }
 
 // ---------------------------------------------------------------------------
@@ -133,7 +140,7 @@ test("SB-01 · FACTORIZE(12 = 3 x 4) sur une ligne additive : pas de preuve sema
 
   // La ligne porte "+", pas "*" : la factorisation n'a pas eu lieu.
   assert.deepEqual(spec.rows[0].ops, ["+", "+"], "la spec doit rester additive");
-  assertBlocked(res, "SB-01");
+  assertBlocked(res, "SB-01", "ne figure pas dans la declaration ops");
 
   // Et la grille proposee n'est meme pas resolue.
   assert.equal(isSolved(res.proposedState), false, "SB-01 : la grille proposee n'est pas resolue");
@@ -157,7 +164,7 @@ test("SB-02 · DECOMPOSE(7 = 3 + 4) sur une ligne multiplicative : pas de preuve
 
   // La ligne porte "*", pas "+" : la decomposition additive n'a pas eu lieu.
   assert.deepEqual(spec.rows[0].ops, ["*", "*"], "la spec doit rester multiplicative");
-  assertBlocked(res, "SB-02");
+  assertBlocked(res, "SB-02", "ne figure pas dans la declaration ops");
   assert.equal(isSolved(res.proposedState), false, "SB-02 : la grille proposee n'est pas resolue");
 });
 
@@ -177,7 +184,7 @@ test("SB-03 · FACTORIZE avec 3@(0,0) et 4@(2,2) (aucune ligne commune) : pas de
 
   // (0,0) et (2,2) ne partagent ni ligne ni colonne.
   assert.notEqual(0, 2);
-  assertBlocked(res, "SB-03");
+  assertBlocked(res, "SB-03", "aucune ligne commune");
 });
 
 // ---------------------------------------------------------------------------
@@ -198,16 +205,26 @@ test("SB-04 · les trois faux positifs restent distincts d'un rejet V5", () => {
   assert.equal(rejected.valid, false, "SB-04 : un rejet V5 doit rester valid=false");
 
   // Faux positif de portee : accepte par V5, NON certifie comme Methode.
+  // La reclamation FACTORIZE est fournie pour que le temoin statue vraiment.
+  const fpRelation = methodRelation(METHOD_FACTORIZE, {
+    targets: [{ r: 0, c: 0 }, { r: 0, c: 1 }],
+    values: [3, 4],
+    parameters: { target: 12 },
+  });
+  assert.equal(fpRelation.requiredOp, "*", "FACTORIZE revendique la multiplication");
   const falsePositive = prove(createSession(additiveSpec()), [
     { id: "PLACE", v: 3, r: 0, c: 0 },
     { id: "PLACE", v: 4, r: 0, c: 1 },
-  ]);
+  ], fpRelation);
   assert.equal(falsePositive.valid, true, "SB-04 : la legalite primitive doit rester acceptee");
   assert.equal(isSemanticallyProven(falsePositive), false, "SB-04 : ... sans jamais certifier la Methode");
 
-  // Les deux portent le meme statut semantique : le blocage est uniforme.
-  assert.equal(rejected.semantic.status, SEMANTIC_PROOF_BLOCKED.status);
-  assert.equal(falsePositive.semantic.status, SEMANTIC_PROOF_BLOCKED.status);
+  // Les deux sont non certifies, mais pour deux raisons distinctes : le rejet
+  // V5 n'a pas d'etat resultant, le faux positif en a un mais non conforme.
+  assert.equal(rejected.semantic.status, SEMANTIC_STATUS_UNPROVEN);
+  assert.equal(falsePositive.semantic.status, SEMANTIC_STATUS_UNPROVEN);
+  assert.equal(isSemanticallyProven(rejected), false);
+  assert.equal(isSemanticallyProven(falsePositive), false);
 });
 
 // ---------------------------------------------------------------------------
@@ -232,6 +249,9 @@ test("SB-05 · isSemanticallyProven() est false sur TOUTES les formes de retour"
     assert.equal(c.semantic.proven, false);
     assert.equal(c.scope, PROOF_SCOPE_PRIMITIVE_ONLY);
   }
+  // Sans reclamation, le volet semantique reste BLOCKED : rien n'est statue.
+  assert.equal(cases[2].semantic.status, SEMANTIC_STATUS_BLOCKED);
+  assert.ok(cases[2].semantic.reason.includes("Aucune reclamation semantique"));
 
   // Les retours precoces de preview() exposent la meme forme.
   const early = preview(createSession(additiveSpec()), createIntent({
@@ -248,13 +268,15 @@ test("SB-05 · isSemanticallyProven() est false sur TOUTES les formes de retour"
 // ---------------------------------------------------------------------------
 // SB-06 · Le verdict bloque est fige : on ne peut pas le basculer a la main.
 // ---------------------------------------------------------------------------
-test("SB-06 · SEMANTIC_PROOF_BLOCKED est fige et non falsifiable en place", () => {
-  assert.equal(Object.isFrozen(SEMANTIC_PROOF_BLOCKED), true);
-  assert.throws(() => { "use strict"; SEMANTIC_PROOF_BLOCKED.proven = true; }, TypeError);
-  assert.throws(() => { "use strict"; SEMANTIC_PROOF_BLOCKED.status = "PROVEN"; }, TypeError);
-  assert.equal(SEMANTIC_PROOF_BLOCKED.proven, false);
+test("SB-06 · les verdicts figes sont non falsifiables en place", () => {
+  for (const v of [SEMANTIC_PROOF_BLOCKED, SEMANTIC_PROOF_UNPROVEN]) {
+    assert.equal(Object.isFrozen(v), true);
+    assert.throws(() => { "use strict"; v.proven = true; }, TypeError);
+    assert.throws(() => { "use strict"; v.status = "PROVEN"; }, TypeError);
+    assert.equal(v.proven, false);
+  }
   assert.equal(SEMANTIC_PROOF_BLOCKED.status, SEMANTIC_STATUS_BLOCKED);
-  assert.deepEqual([...SEMANTIC_PROOF_BLOCKED.missingApi], ["evaluateLine"]);
+  assert.equal(SEMANTIC_PROOF_UNPROVEN.status, SEMANTIC_STATUS_UNPROVEN);
 });
 
 // ---------------------------------------------------------------------------

@@ -8,7 +8,14 @@
 import { validateIntent } from "../methods/intent.mjs";
 import { checkPreconditions } from "../methods/preconditions.mjs";
 import { compile } from "../commands/compiler.mjs";
-import { prove, isSemanticallyProven, PROOF_SCOPE_PRIMITIVE_ONLY, SEMANTIC_PROOF_BLOCKED } from "../proof/proof-engine.mjs";
+import { methodRelation } from "../methods/catalog.mjs";
+import {
+  prove,
+  isSemanticallyProven,
+  PROOF_SCOPE_PRIMITIVE_ONLY,
+  SEMANTIC_PROOF_BLOCKED,
+  SEMANTIC_PROOF_UNPROVEN,
+} from "../proof/proof-engine.mjs";
 
 /**
  * Forme constante des retours précoces : mêmes clés que le cas nominal, donc
@@ -20,11 +27,11 @@ function blockedPreview(methodId, error, cost = null) {
     valid: false,
     methodId: methodId ?? "UNKNOWN",
     commands: [],
-    proof: { valid: false, engine: "V5", scope: PROOF_SCOPE_PRIMITIVE_ONLY, semantic: SEMANTIC_PROOF_BLOCKED, steps: [], finalState: null },
+    proof: { valid: false, engine: "V5", scope: PROOF_SCOPE_PRIMITIVE_ONLY, semantic: SEMANTIC_PROOF_UNPROVEN, steps: [], finalState: null },
     proposedState: null,
     cost,
     proofScope: PROOF_SCOPE_PRIMITIVE_ONLY,
-    semantic: SEMANTIC_PROOF_BLOCKED,
+    semantic: SEMANTIC_PROOF_UNPROVEN,
     methodSemanticsCertified: false,
     error,
   };
@@ -69,7 +76,10 @@ export function preview(state, intent, registry) {
     return blockedPreview(intent.methodId, `Échec de compilation : ${err.message}`, cost);
   }
 
-  const proof = prove(state, compiled.commands);
+  // Reclamation V5 derivee de la DECLARATION de la Methode (operateur) et de
+  // l'Intent (cellules, valeurs, cible). Aucun calcul ici : le temoin statue.
+  const relation = methodRelation(method, intent);
+  const proof = prove(state, compiled.commands, relation);
 
   // Guarantee zero mutation on state
   if (JSON.stringify(state) !== stateSnapshot) {
@@ -88,6 +98,7 @@ export function preview(state, intent, registry) {
     // V5-SEMANTIC-WITNESS est ouvert, ce drapeau reste à false.
     proofScope: proof.scope ?? PROOF_SCOPE_PRIMITIVE_ONLY,
     semantic: proof.semantic ?? SEMANTIC_PROOF_BLOCKED,
+    semanticRelation: relation,
     methodSemanticsCertified: isSemanticallyProven(proof),
     error: proof.valid ? undefined : proof.error,
   };

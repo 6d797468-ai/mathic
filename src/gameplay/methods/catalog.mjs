@@ -8,9 +8,14 @@
  * - METHOD_FACTORIZE
  */
 
+import { RELATION_KIND } from "../../v5/rules/witness.mjs";
+
 export const METHOD_FUSE = Object.freeze({
   id: "METHOD_FUSE",
   name: "Fusion Additive",
+  // Operateur V5 que la Methode pretend utiliser. DECLARATION seule : aucune
+  // arithmetique n'est faite ici, le temoin V5 statue sur la ligne reelle.
+  semanticOp: "+",
   description: "Construit une cible additive à partir de valeurs composantes.",
   parameters: ["target"],
   primitiveOperations: ["PLACE"],
@@ -48,6 +53,8 @@ export const METHOD_FUSE = Object.freeze({
 export const METHOD_DECOMPOSE = Object.freeze({
   id: "METHOD_DECOMPOSE",
   name: "Décomposition",
+  // Operateur V5 que la Methode pretend utiliser. DECLARATION seule.
+  semanticOp: "+",
   description: "Choix stratégique de construire une cible T par addition de ses composantes A + B.",
   parameters: ["target"],
   primitiveOperations: ["PLACE"],
@@ -85,6 +92,8 @@ export const METHOD_DECOMPOSE = Object.freeze({
 export const METHOD_FACTORIZE = Object.freeze({
   id: "METHOD_FACTORIZE",
   name: "Factorisation",
+  // Operateur V5 que la Methode pretend utiliser. DECLARATION seule.
+  semanticOp: "*",
   description: "Choix stratégique de construire une cible T par multiplication de ses facteurs A x B.",
   parameters: ["target"],
   primitiveOperations: ["PLACE"],
@@ -118,6 +127,38 @@ export const METHOD_FACTORIZE = Object.freeze({
     };
   },
 });
+
+/**
+ * Traduit une Intent de Methode en relation V5 destinee au temoin semantique.
+ *
+ * La relation produite ne contient AUCUN vocabulaire de Methode : uniquement
+ * des positions, des valeurs, un operateur et une cible. C'est ce qui permet
+ * au temoin V5 de rester autonome (W-05) et a la couche gameplay de descendre
+ * vers V5 sans jamais inverser la dependance.
+ *
+ * @returns {object|null} relation V5, ou null si l'Intent ne porte pas
+ *   assez d'information pour formuler une reclamation (ligne incomplete
+ *   dans les valeurs, cible absente...). Le temoin rendra alors
+ *   UNSUPPORTED, jamais PROVEN.
+ */
+export function methodRelation(method, intent) {
+  if (!method || typeof method.semanticOp !== "string" || !intent) return null;
+  const target = intent.parameters?.target;
+  if (!Number.isInteger(target)) return null;
+
+  const cells = (intent.targets ?? []).slice(0, 2);
+  const values = (intent.values ?? []).slice(0, 2);
+  if (cells.length !== 2 || values.length !== 2) return null;
+  if (!Number.isInteger(values[0]) || !Number.isInteger(values[1])) return null;
+
+  return {
+    kind: RELATION_KIND,
+    values,
+    cells,
+    requiredOp: method.semanticOp,
+    target,
+  };
+}
 
 export function registerFoundingMethods(registry) {
   registry.register(METHOD_FUSE);

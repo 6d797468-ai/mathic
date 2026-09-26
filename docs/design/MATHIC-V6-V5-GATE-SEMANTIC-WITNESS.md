@@ -1,11 +1,19 @@
 # MATHIC V6 — GATE `V5-SEMANTIC-WITNESS` (CONTRAT)
 
-**Statut du gate : `OPEN` — non implémenté. Contrat uniquement.**
+**Statut du gate : `CLOSED` en M27.**
 
-Ce document ne fait **pas** partie de M26. Il décrit ce qui manque, ce qui sera
-exigé, et ce qui est explicitement interdit, afin que la levée du blocage
-`M26 = BLOCKED` soit un acte délibéré et vérifiable plutôt qu'un élargissement
-silencieux d'un indicateur.
+Implémenté par `src/v5/rules/witness.mjs`. Audit préalable et relevé des résultats :
+`docs/design/MATHIC-V6-M27-SEMANTIC-WITNESS-AUDIT.md`.
+
+Ce document décrit ce qui manquait, ce qui est exigé, et ce qui est
+explicitement interdit. Il a servi de contrat à M27, qui l'a satisfait.
+
+**Écart assumé par rapport au contrat initial :** la relation proposée était
+`{ a, b, op, c }`, c'est-à-dire une identité binaire. L'audit a montré que
+cette forme était **falsifiable** — une ligne additive résolue aurait satisfait
+une réclamation `3 * 4 = 12`. La forme retenue est
+`{ values, cells, requiredOp, target }` : une **saturation de ligne déclarée**,
+non calculable et donc non falsifiable. Voir §2.1 du rapport M27.
 
 ---
 
@@ -57,10 +65,10 @@ feu vert.
 
 ### 3.1 Signature
 
-Le witness vit dans `src/v5/rules/` et n'est nommé qu'après conception
-complète. Forme attendue :
+**Implémenté tel quel.** Le witness vit dans `src/v5/rules/witness.mjs` et ne
+connaît rien du gameplay.
 
-```
+```js
 witnessRelation(state, relation) -> verdict
 ```
 
@@ -70,9 +78,17 @@ Décrit la relation à attester, dans les seuls termes que V5 connaît déjà.
 
 | Champ | Type | Rôle |
 |---|---|---|
-| `kind` | énumération | Forme de la relation à vérifier |
-| `a`, `b`, `op`, `c` | `number` | Opérandes et résultat attendus |
-| `cells` | liste de `{ r, c }` | Localisation des cellules dont les valeurs portent les opérandes |
+| `kind` | `"LINE_SATISFACTION"` | Forme de la relation à vérifier |
+| `values` | `[number, number]` | Valeurs que la Méthode prétend placer |
+| `cells` | `[{ r, c }, { r, c }]` | Localisation de ces valeurs |
+| `requiredOp` | `string` | Opérateur V5 que la Méthode prétend utiliser |
+| `target` | `number` | Cible que la Méthode prétend atteindre |
+
+> **Écart de forme, assumé.** Le contrat initial prévoyait `{ a, b, op, c }`.
+> Une identité binaire aurait exigé de recalculer l'expression, donc de
+> dupliquer la sémantique V5, et aurait produit un faux `PROVEN` sur une ligne
+> additive résolue. La forme retenue porte sur la **ligne** : c'est ce que
+> l évaluateur souverain sait trancher.
 
 Aucune notion de « Méthode », « Intent » ou « strategie » n'entre dans cette
 structure : c'est `W-05`.
@@ -135,33 +151,43 @@ Ces interdits font partie du contrat, pas de son implementation.
 
 Le gate ne peut passer `CLOSED` que si toutes ces conditions :
 
-- [ ] L'API existe dans `src/v5/rules/` et est exportée publiquement.
-- [ ] Aucun code de sémantique n'est dupliqué hors de `src/v5/`.
-- [ ] Les tests du witness passent **sans** importer `src/gameplay/`.
-- [ ] Les trois faux positifs de §1 rendent `UNPROVEN` via le witness.
-- [ ] Une relation satisfaite rend `PROVEN`, sur au moins une forme couverte.
-- [ ] `UNSUPPORTED` est rendu pour une forme non couverte, et jamais `PROVEN`.
-- [ ] Non-mutation vérifiée par test.
-- [ ] Déterminisme vérifié par exécution répétée.
-- [ ] Contrat de `rule-engine-v5` mis à jour.
+- [x] L'API existe dans `src/v5/rules/` et est exportée publiquement.
+- [x] Aucun code de sémantique n'est dupliqué hors de `src/v5/`.
+- [x] Les tests du witness passent **sans** importer `src/gameplay/`.
+- [x] Les trois faux positifs de §1 rendent `UNPROVEN` via le witness.
+- [x] Une relation satisfaite rend `PROVEN`, sur au moins une forme couverte.
+- [x] `UNSUPPORTED` est rendu pour une forme non couverte, et jamais `PROVEN`.
+- [x] Non-mutation vérifiée par test (`W-12`).
+- [x] Déterminisme vérifié par exécution répétée (`W-13`).
+- [x] Contrat de `rule-engine-v5` mis à jour (ce document).
+
+**Résistance à l'affaiblissement.** Trois truquages ont été injectés puis
+annulés : forcer `PROVEN` inconditionnellement (3 échecs), supprimer le
+garde-fou d'opérateur (3 échecs), introduire une table d'opérateurs miroir
+(1 échec). Le gate ne peut pas être ouvert par une modification locale.
 
 ---
 
 ## 7. CONSÉQUENCE SUR M26
 
-Tant que ce gate est `OPEN` :
+Le gate est `CLOSED`. `SEMANTIC_STATUS_PROVEN` est **atteignable**, et ne l'est
+que par un verdict réel du témoin.
 
-- `M26 = BLOCKED`.
-- `isSemanticallyProven()` retourne `false` sur toutes les branches.
-- `SEMANTIC_STATUS_PROVEN` est inatteignable.
-- `methodSemanticsCertified` est `false` par construction.
-- Les tests `SB-01` à `SB-06` restent verts et **doivent le rester**.
+Ce qui a changé pour M26 :
 
-À la fermeture du gate, `SEMANTIC_STATUS_PROVEN` devient atteignable. Les
-tests `SB-01` à `SB-03` échoueront alors **par construction**, ce qui est le
-comportement voulu : la réouverture de M26 doit être un acte conscient, avec
-mise à jour de `MATHIC-V6-M26-REPORT.md`, et ne peut pas résulter d'un
-glissement de code.
+- `isSemanticallyProven()` retourne `true` uniquement sur `PROVEN`.
+- `methodSemanticsCertified` peut valoir `true`, sur preuve seulement.
+- `SEMANTIC_PROOF_BLOCKED` est désormais réservé au cas où **aucune
+  réclamation n'a pu être formulée** : il ne masque plus un cas particulier.
+- Les trois faux positifs de M26 rendent `UNPROVEN` avec une raison
+  **diagnostique**, au lieu d'un `BLOCKED` global. C'est plus fort, pas plus
+  faible : la non-certification est désormais expliquée.
+
+Ce qui n'a **pas** changé : `valid` reste la légalité primitive, et un
+`valid: true` sans `PROVEN` ne certifie toujours aucune Méthode.
+
+La réouverture de `M26` comme jalon `PROVEN` exigerait un second gate, sur la
+**solvabilité**, qui reste ouvert et n'a pas été touché.
 
 ---
 

@@ -2,6 +2,16 @@
 
 **Verdict : `M26 = BLOCKED`**
 
+> **Suite donnée en M27.** Le gate `V5-SEMANTIC-WITNESS` a été **fermé** par
+> `src/v5/rules/witness.mjs`. Les trois faux positifs du §3 obtiennent désormais
+> un verdict **spécifique** — `UNPROVEN`, avec la raison — au lieu du `BLOCKED`
+> global. Le corps de ce rapport décrit l'état de M26 **à sa
+> livraison** et n'est pas réécrit. Voir
+> `MATHIC-V6-M27-SEMANTIC-WITNESS-AUDIT.md`.
+>
+> Ce qui reste vrai : `valid` reste la légalité primitive, et un `valid: true`
+> ne certifie une Méthode que sur un `PROVEN` réellement produit par V5.
+
 Le moteur de Méthodes est publié, câblé, testé et déterministe. Il n'est **pas** prouvé sur le fond. Ce rapport sépare strictement ce qui est acquis de ce qui manque, pour qu'aucun consommateur ne puisse lire un `valid: true` comme une certification de Méthode.
 
 ---
