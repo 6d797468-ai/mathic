@@ -8,19 +8,31 @@
 import { validateIntent } from "../methods/intent.mjs";
 import { checkPreconditions } from "../methods/preconditions.mjs";
 import { compile } from "../commands/compiler.mjs";
-import { prove } from "../proof/proof-engine.mjs";
+import { prove, isSemanticallyProven, PROOF_SCOPE_PRIMITIVE_ONLY, SEMANTIC_PROOF_BLOCKED } from "../proof/proof-engine.mjs";
+
+/**
+ * Forme constante des retours précoces : mêmes clés que le cas nominal, donc
+ * aucun consommateur ne peut lire `valid` sur un objet qui n'expose pas la
+ * portée de la preuve ni le statut sémantique.
+ */
+function blockedPreview(methodId, error, cost = null) {
+  return {
+    valid: false,
+    methodId: methodId ?? "UNKNOWN",
+    commands: [],
+    proof: { valid: false, engine: "V5", scope: PROOF_SCOPE_PRIMITIVE_ONLY, semantic: SEMANTIC_PROOF_BLOCKED, steps: [], finalState: null },
+    proposedState: null,
+    cost,
+    proofScope: PROOF_SCOPE_PRIMITIVE_ONLY,
+    semantic: SEMANTIC_PROOF_BLOCKED,
+    methodSemanticsCertified: false,
+    error,
+  };
+}
 
 export function preview(state, intent, registry) {
   if (!state) {
-    return {
-      valid: false,
-      methodId: intent?.methodId ?? "UNKNOWN",
-      commands: [],
-      proof: { valid: false, engine: "V5", steps: [], finalState: null },
-      proposedState: null,
-      cost: null,
-      error: "État V5 initial nul ou indéfini",
-    };
+    return blockedPreview(intent?.methodId, "État V5 initial nul ou indéfini");
   }
 
   // Deep clone initial state snapshot for immutability check / safety
@@ -28,27 +40,14 @@ export function preview(state, intent, registry) {
 
   const intentCheck = validateIntent(intent);
   if (!intentCheck.valid) {
-    return {
-      valid: false,
-      methodId: intent?.methodId ?? "UNKNOWN",
-      commands: [],
-      proof: { valid: false, engine: "V5", steps: [], finalState: null },
-      proposedState: null,
-      cost: null,
-      error: `Intent invalide : ${intentCheck.errors.join("; ")}`,
-    };
+    return blockedPreview(
+      intent?.methodId,
+      `Intent invalide : ${intentCheck.errors.join("; ")}`
+    );
   }
 
   if (!registry || typeof registry.has !== "function" || !registry.has(intent.methodId)) {
-    return {
-      valid: false,
-      methodId: intent.methodId,
-      commands: [],
-      proof: { valid: false, engine: "V5", steps: [], finalState: null },
-      proposedState: null,
-      cost: null,
-      error: `Méthode '${intent.methodId}' non enregistrée`,
-    };
+    return blockedPreview(intent.methodId, `Méthode '${intent.methodId}' non enregistrée`);
   }
 
   const method = registry.get(intent.methodId);
@@ -56,30 +55,18 @@ export function preview(state, intent, registry) {
 
   const preconditionsResult = checkPreconditions(state, intent, registry);
   if (!preconditionsResult.ok) {
-    return {
-      valid: false,
-      methodId: intent.methodId,
-      commands: [],
-      proof: { valid: false, engine: "V5", steps: [], finalState: null },
-      proposedState: null,
-      cost,
-      error: `Préconditions échouées : ${preconditionsResult.reason}`,
-    };
+    return blockedPreview(
+      intent.methodId,
+      `Préconditions échouées : ${preconditionsResult.reason}`,
+      cost
+    );
   }
 
   let compiled;
   try {
     compiled = compile(state, intent, registry);
   } catch (err) {
-    return {
-      valid: false,
-      methodId: intent.methodId,
-      commands: [],
-      proof: { valid: false, engine: "V5", steps: [], finalState: null },
-      proposedState: null,
-      cost,
-      error: `Échec de compilation : ${err.message}`,
-    };
+    return blockedPreview(intent.methodId, `Échec de compilation : ${err.message}`, cost);
   }
 
   const proof = prove(state, compiled.commands);
@@ -96,6 +83,12 @@ export function preview(state, intent, registry) {
     proof,
     proposedState: proof.valid ? proof.finalState : null,
     cost,
+    // `valid` ne vaut que la légalité primitive des PLACE (portée V5). Il ne
+    // certifie PAS que la Méthode a été accomplie : tant que le gate
+    // V5-SEMANTIC-WITNESS est ouvert, ce drapeau reste à false.
+    proofScope: proof.scope ?? PROOF_SCOPE_PRIMITIVE_ONLY,
+    semantic: proof.semantic ?? SEMANTIC_PROOF_BLOCKED,
+    methodSemanticsCertified: isSemanticallyProven(proof),
     error: proof.valid ? undefined : proof.error,
   };
 }
