@@ -7,6 +7,46 @@
  * n'est PAS l'oracle du gate V5-SOLVABILITY et ne doit jamais l'être.
  *
  * ---------------------------------------------------------------------------
+ * CONTRAT D'AUTORITE — CLASSIFICATION DEFINITIVE (M28)
+ * ---------------------------------------------------------------------------
+ * `certify()` est reparti en deux directions, de statut INEGAL :
+ *
+ *   ┌─ AFFIRMATION POSITIVE ──────────────────────────────────────────────┐
+ *   │  solvable: true                                                    │
+ *   │  → direction SOUND                                                  │
+ *   │  → utilisable comme affirmation positive VERIFIABLE                 │
+ *   │                                                                      │
+ *   │  Justification : les transitions viennent de getMoves/apply, donc   │
+ *   │  du moteur souverain. Un chemin trouve est un vrai chemin.           │
+ *   │  Portee : une affirmation d'EXISTENCE, jamais d'inexistence.        │
+ *   └──────────────────────────────────────────────────────────────────────┘
+ *
+ *   ┌─ AFFIRMATION NEGATIVE ──────────────────────────────────────────────┐
+ *   │  solvable: false                                                   │
+ *   │  → NON CERTIFICATIF                                                │
+ *   │  → NE PEUT PAS etre interprete comme une preuve d'insolvabilite    │
+ *   │  → NE PEUT JAMAIS fermer le gate V5-SOLVABILITY                     │
+ *   │                                                                      │
+ *   │  budgeted: false                                                    │
+ *   │  → NE PEUT PAS etre interprete comme une preuve d'exhaustivite     │
+ *   │                                                                      │
+ *   │  Justification : completude cassee (M28-SOLVER-001). La branche qui  │
+ *   │  pose ce drapeau est structurellement morte ; `budgeted:false`       │
+ *   │  designe « espace explore » alors que la recherche a pu s'arreter    │
+ *   │  sur une borne. C'est une ALLEGATION d'exhaustivite, non un fait.    │
+ *   └──────────────────────────────────────────────────────────────────────┘
+ *
+ * En une ligne : `certify()` ne peut pas etre cite comme preuve de
+ * solvabilite ni d'insolvabilite. Il ne participe PAS a la fermeture de
+ * V5-SOLVABILITY, qui repose exclusivement sur
+ * `src/v5/rules/solvability-witness.mjs`.
+ *
+ * Ce composant est volontairement CONSERVE et teste. Supprimer ses tests
+ * apres la decouverte du defaut donnerait l'illusion d'un probleme resolu
+ * alors que seule la piece a inconvenient aurait disparu. Il sert
+ * d'artefact historique ET de temoin de regression permanent.
+ *
+ * ---------------------------------------------------------------------------
  * CONTRAT — À LIRE AVANT TOUT USAGE
  * ---------------------------------------------------------------------------
  *   A negative result from legacy certify() MUST NOT be interpreted
@@ -14,6 +54,12 @@
  *
  *   Un resultat negatif de certify() NE DOIT PAS etre interprete
  *   comme une preuve d'inesolvabilite.
+ *
+ *   A false `budgeted` flag MUST NOT be read as evidence of an
+ *   exhaustive search.
+ *
+ *   Un `budgeted: false` NE DOIT PAS etre lu comme la preuve
+ *   d'une recherche exhaustive.
  *
  * Deux raisons, chacune verifiee par test de non-regression :
  *

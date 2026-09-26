@@ -168,7 +168,7 @@ casserait silencieusement.
 | Mesure | Valeur |
 |---|---|
 | Tests du witness | 28 |
-| Tests de quarantaine du legacy | 9 |
+| Tests de quarantaine du legacy | 11 |
 | Tests `tests/v5/rules.test.mjs` + `tests/atelier/symbiote.test.mjs` | 29 |
 | Sondes anti-falsification | 10, **toutes détectées** |
 | `npm test` | voir §5 |
@@ -224,7 +224,76 @@ tests. Les échappements ont été analysés, puis les tests durcis :
 
 ---
 
-## 6. CONSÉQUENCES
+## 6. CLASSIFICATION DÉFINITIVE DE `certify()`
+
+Décision M28, actée après validation du gate. `certify()` est **conservé**,
+testé, documenté — et **reclassifié**.
+
+### 6.1 Les deux directions, de statut inégal
+
+```
+certify()
+├── solvable: true
+│   └── direction POSITIVE → SOUND
+│       affirmation d'EXISTENCE vérifiable
+│
+└── solvable: false
+    └── NON CERTIFICATIF
+        • complétude cassée (M28-SOLVER-001)
+        • budgeted: false → allégation d'exhaustivité, non un fait
+        • ne peut jamais fermer V5-SOLVABILITY
+```
+
+| Résultat | Interprétation autorisée |
+|---|---|
+| `solvable: true` | affirmation positive **vérifiable** — les transitions viennent de `getMoves`/`apply`, donc du moteur souverain |
+| `solvable: false` | **aucune** interprétation — ne prouve pas l'insolvabilité |
+| `budgeted: false` | **aucune** interprétation — ne prouve pas l'exhaustivité, la branche qui le pose étant structurellement morte |
+
+`certify()` **ne participe pas** à la fermeture de `V5-SOLVABILITY`, qui
+repose exclusivement sur `src/v5/rules/solvability-witness.mjs`.
+
+### 6.2 Pourquoi conserver, plutôt que supprimer
+
+Retirer les deux tests consommateurs après la découverte du défaut produirait
+une fausse impression de résolution : le problème n'aurait pas disparu, seule la
+pièce gênante aurait été supprimée. Le composant reste donc comme **artefact
+historique** et **témoin de régression permanent** : c'est lui qui empêche le
+défaut de revenir sans bruit.
+
+Ces quatre clauses sont vérifiées littéralement dans le source par
+`M28-SOLVER-006`, et la survie de la direction positive par `M28-SOLVER-007`.
+
+### 6.3 Frontière entre preuves souveraines et ancien outillage
+
+```
+                        V5 ENGINE  (rule-engine-v5)
+                             │
+              ┌──────────────┴──────────────┐
+              │                             │
+   semantic witness               solvability witness
+   (witness.mjs)                  (solvability-witness.mjs)
+              │                             │
+       M27  CLOSED                    M28  CLOSED
+              │                             │
+              └──────────────┬──────────────┘
+                             │
+                        GAME GATES
+
+
+   legacy solver.mjs / certify()   —  LEGACY / UNTRUSTED
+              │
+              ├─ tests historiques (conserves, 2 fichiers)
+              ├─ régression permanente du défaut (M28-SOLVER-001)
+              └─ NE PEUT PAS porter V5-SOLVABILITY
+```
+
+Cette frontière est **volontaire et saine**. M27 et M28 ne seront pas rouverts
+pour faire disparaître `solver.mjs`.
+
+---
+
+## 7. CONSÉQUENCES
 
 1. `certify()` ne peut plus être cité comme preuve. Sa direction **positive**
    reste exacte et ses deux tests consommateurs sont requalifiés en conséquence

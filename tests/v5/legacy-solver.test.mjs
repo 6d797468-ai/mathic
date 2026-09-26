@@ -148,6 +148,51 @@ test("M28-SOLVER-004 · le legacy n'est pas importe par la chaine de preuve M28"
     "le legacy n'importe que le moteur souverain, rien d'autre");
 });
 
+test("M28-SOLVER-006 · le CONTRAT D'AUTORITE classifie les deux directions", () => {
+  // Les quatre clauses du contrat doivent etre LITTERALEMENT presentes dans le
+  // source, pour qu'un lecteur ne puisse pas les manquer ni les adoucir.
+  const src = readFileSync(SOLVER_SRC, "utf8");
+  for (const clause of [
+    // 1. direction positive : sound, utilisable comme affirmation verifiable
+    ["solvable: true", "direction SOUND"],
+    ["affirmation positive VERIFIABLE", "portee positive explicite"],
+    // 2. direction negative : non certifikative
+    ["solvable: false", "direction negative"],
+    ["NON CERTIFICATIF", "interdit de certifier"],
+    ["NE PEUT JAMAIS fermer le gate V5-SOLVABILITY", "exclusion du gate"],
+    // 3. budgeted:false n'est pas une preuve d'exhaustivite
+    ["budgeted: false", "clause budgeted"],
+    ["NE PEUT PAS etre interprete comme une preuve d'exhaustivite", "interdit d'exhaustivite"],
+    ["ALLEGATION d'exhaustivite, non un fait", "qualification du drapeau"],
+    // 4. exclusion du gate, en clair
+    ["ne peut pas etre cite comme preuve", "exclusion de citation"],
+    ["ne participe PAS a la fermeture de", "exclusion explicite du gate"],
+  ]) {
+    assert.ok(src.includes(clause[0]), `clause de contrat absente : ${clause[1]} (${clause[0]})`);
+  }
+  // Et la mention d'intel est interdite par INTEL-C22 : on ne l'introduit pas ici.
+  assert.ok(!/intel/i.test(src), "INTEL-C22 : aucune mention interdite dans le source");
+});
+
+test("M28-SOLVER-007 · la direction positive reste sound : ce qui survit au tri", () => {
+  // Le tri ne jette pas certify() : il en conserve une moitie valide. Ce test
+  // verifie que cette moitie tient, afin que la reclassification ne degrade pas
+  // ce qui etait exact avant M28.
+  const spec = {
+    grid: [[-1, -1]], rows: [{ target: 12, ops: ["*"] }],
+    cols: [{ target: 3, ops: [] }, { target: 4, ops: [] }], reserve: { 3: 1, 4: 1 },
+  };
+  const r = certify(spec, { budget: 20000, maxDepth: 8 });
+  assert.equal(r.solvable, true, "la direction positive reste exacte");
+  // …et elle correspond bien a une solution reelle, constatee par le moteur.
+  assert.equal(solvableByExhaustiveBFS(spec), true);
+  // La direction negative, elle, ne prouve rien : ni ici, ni ailleurs.
+  const neg = certify({ ...spec, rows: [{ target: 13, ops: ["*"] }] }, { budget: 20000, maxDepth: 8 });
+  assert.equal(neg.solvable, false);
+  assert.equal(solvableByExhaustiveBFS({ ...spec, rows: [{ target: 13, ops: ["*"] }] }), false,
+    "ici l'absence est reelle — mais certify() ne l'etablit pas, il la constate");
+});
+
 // ---------------------------------------------------------------------------
 // M28-SOLVER-005 · Ce qui reste VALABLE dans le legacy, et doit le rester
 // ---------------------------------------------------------------------------
