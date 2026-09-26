@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b0e1a" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-title" content="MATHIC" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>MATHIC 1.0 — Atelier Astral</title>
+    <link rel="stylesheet" href="./atelier.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>MATHIC <span class="seal-badge">✦</span></h1>
+        <p class="name">Atelier Astral</p>
+        <p class="tagline">La magie Mathic est une science pure et déterministe.</p>
+      </header>
+
+      <section class="panel">
+        <h2>1 · Anomalie du jour</h2>
+        <p class="hint">Choisis un défi à invoquer, puis résous-le sur la grille.</p>
+        <div class="preset-row" id="presets"></div>
+        <div id="board" class="board" aria-label="grille de calcul"></div>
+        <div id="hud" class="hud">
+          <div class="hud-item">Coups <b id="moves">0</b></div>
+          <div class="hud-item">Résolu <b id="solved">–</b></div>
+          <div class="hud-item">Reste <b id="reserve">–</b></div>
+        </div>
+        <p id="status" class="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel" id="symbiote">
+        <h2>⚚ Symbiote des Gardiens <span class="badge-lab">LAB</span></h2>
+        <p class="hint">« Compose les lois des Gardiens sur une même pierre. Aucune ne cède — elles s'accordent en rendant chaque ligne vraie. »</p>
+        <div class="guardians-grid" id="guardians-grid"></div>
+        <div class="symbiote-resonance mono" id="symbiote-resonance">
+          <div class="resonance-head">
+            <span class="legend">RÉSONANCE DU SYMBIOTE</span>
+            <span class="resonance-state" id="resonance-state" data-state="DORMANT">DORMANT</span>
+          </div>
+          <span class="resonance-desc" id="resonance-desc">Sélectionne un ou plusieurs Gardiens.</span>
+        </div>
+        <div class="row">
+          <button id="btn-symbiote-compose" type="button" disabled>⚚ Lier les Sceaux &amp; Forger le Défi</button>
+        </div>
+        <p id="symbiote-out" class="status mono" aria-live="polite"></p>
+      </section>
+
+      <section class="panel" id="sablier" data-mode="present">
+        <h2>⌛ Sablier de Chronos</h2>
+        <p class="hint">« Remonte le temps. Observe ton erreur. Trouve l'instant où ton raisonnement a bifurqué. »</p>
+        <div class="timeline">
+          <div class="rail"><div class="curve" id="curve"></div></div>
+        </div>
+        <div class="row">
+          <button id="btn-start" type="button" class="secondary" disabled>⟲ Origine</button>
+          <button id="btn-back" type="button" class="secondary" disabled>← Revenir</button>
+          <button id="btn-undo" type="button" class="secondary" disabled>Annuler</button>
+          <button id="btn-present" type="button" class="secondary" disabled>Reprendre</button>
+        </div>
+        <p class="readout mono">Coup <b id="cursor-pos">0</b> / <b id="cursor-total">0</b></p>
+        <p id="replay-status" class="status mono" aria-live="polite"></p>
+        <div class="row">
+          <button id="btn-oculus" type="button" class="secondary">◉ OCULUS — Analyser l'état</button>
+        </div>
+      </section>
+
+      <div id="oculus" class="oculus-modal" hidden>
+        <div class="oculus-card panel">
+          <div class="oculus-head">
+            <h2>◉ Oculus d'Analyse</h2>
+            <button id="btn-oculus-close" type="button" class="icon" aria-label="Fermer">✕</button>
+          </div>
+          <div id="oculus-body" class="oculus-body"></div>
+          <button id="btn-oculus-close2" type="button" class="secondary">[ FERMER ]</button>
+        </div>
+      </div>
+
+      <section class="panel">
+        <h2>2 · Frapper le Sceau</h2>
+        <p class="hint">Génère une clé déterministe de ce défi, copiable partout.</p>
+        <div class="row">
+          <button id="btn-seal" type="button">Créer un Sceau</button>
+          <button id="btn-copy" type="button" disabled>Copier</button>
+        </div>
+        <pre id="seal-out" class="mono" aria-label="Sceau généré"></pre>
+      </section>
+
+      <section class="panel">
+        <h2>3 · Soumettre un Sceau</h2>
+        <p class="hint">Colle un Sceau reçu : il est vérifié avant toute session.</p>
+        <textarea id="seal-in" class="mono" rows="4" placeholder="MATHIC-CHAL-1:…"></textarea>
+        <div class="row">
+          <button id="btn-verify" type="button">Vérifier</button>
+          <button id="btn-import" type="button" disabled>Initier le défi</button>
+        </div>
+        <p id="verify-out" class="status mono" aria-live="polite"></p>
+      </section>
+
+      <section class="panel" id="marges">
+        <h2>📜 Marges de Maggeek</h2>
+        <p class="hint">Fragments de savoir gagnés par des expériences vérifiées — jamais lus par des mots, gagnés par des faits.</p>
+        <ul id="fragments" class="fragments"></ul>
+        <p id="marges-note" class="status mono" aria-live="polite"></p>
+      </section>
+
+      <footer class="foot">Univers Mathic — aucun hasard, aucun réseau, aucune autorité.</footer>
+    </main>
+    <script type="module" src="./atelier.js"></script>
+  </body>
+</html>

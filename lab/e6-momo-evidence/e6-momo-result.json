@@ -1,0 +1,93 @@
+{
+  "scenario": "Momo : save vierge → N1 → btn-hint → hint traçable (solverFactId) + fact-verified → PROJECTION≠MUTATION → REPLAY DETERMINISTE → mode fallback/local-llm (provider absent) → fallback déterministe ; gameplay continue (Chrome headless réel, dist-grimoire)",
+  "invariants": {
+    "fact verification": "chaque hint mécanique remonte à un solverFactId (A14-bis)",
+    "projection ≠ mutation": "demander un indice n'écrit jamais mathic.save.v1",
+    "offline first": "aucun provider → hint déterministe (aucune dépendance réseau)",
+    "gameplay continues": "fallback / timeout / modèle absent → replay déterministe"
+  },
+  "assertions": [
+    {
+      "name": "E0 · Index chargé (save vierge, profil frais)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E1 · session N1 montée, bouton Indice (Momo) présent",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E2 · HINT GENERATED — panneau Momo affiché avec lignes",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E2 · TRACEABILITY — ligne porte un solverFactId",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E2 · FACT VERIFIED — badge fact-verified (confidence verified)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E2 · hint texte traçable contient la formule directe N1 (2 + 3 = 5)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E3 · PROJECTION ≠ MUTATION — mathic.save.v1 inchangé par le hint",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E4 · REPLAY DETERMINISTE — même texte sur clic identique",
+      "expected": "2 + 3 = 5 — une opération suffit.[SF-ROUTE-06-FIRSTMOVE]",
+      "actual": "2 + 3 = 5 — une opération suffit.[SF-ROUTE-06-FIRSTMOVE]",
+      "pass": true
+    },
+    {
+      "name": "E5 · mode basculé sur 'fallback'",
+      "expected": "fallback",
+      "actual": "fallback",
+      "pass": true
+    },
+    {
+      "name": "E5 · FALLBACK WORKS — hint déclencheur déterministe (provider absent)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E5 · PROJECTION ≠ MUTATION (mode fallback)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E6 · OFFLINE / NO-LLM — mode local-llm sans provider → fallback déterministe (gameplay continue)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E6 · zéro erreur console/exception sur toute la boucle Momo",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    }
+  ],
+  "passed": 13,
+  "failed": 0,
+  "consoleErrors": [],
+  "status": "E6 PROVEN"
+}

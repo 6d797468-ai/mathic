@@ -1,0 +1,452 @@
+/* ============================================================================
+   MATHIC 1.0 — Grimoire des Mondes (M17)
+   Esthétique diégétique : pierre sombre, encre claire, sceaux des deux familles.
+   Le style n'emporte aucune affordance : chaque état visuel reflète un état
+   réel de la machine de boucle (LOCKED/OPEN/MASTERED viennent du cœur).
+   ============================================================================ */
+
+:root {
+  --bg: #0b0e1a;
+  --panel: #12152a;
+  --panel-2: #171b33;
+  --ink: #e8e6d8;
+  --ink-dim: #8b91a7;
+  --gold: #d4b268;
+  --ok: #4ade80;
+  --err: #f87171;
+  --line: #262b47;
+  --sealed: #3a3f5e;
+  --radius: 14px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(1200px 800px at 50% -10%, #151936 0%, var(--bg) 60%);
+  color: var(--ink);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px 14px 40px;
+}
+
+header {
+  text-align: center;
+  margin: 18px 0 22px;
+}
+
+h1 {
+  font-size: 1.7rem;
+  letter-spacing: 0.35em;
+  margin: 0;
+  color: var(--gold);
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 0 0 6px;
+  color: var(--gold);
+}
+
+.grimoire-badge {
+  font-size: 1.2rem;
+  vertical-align: middle;
+}
+
+.name {
+  margin: 2px 0 0;
+  font-size: 0.95rem;
+  color: var(--ink-dim);
+  letter-spacing: 0.12em;
+}
+
+.tagline {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--ink-dim);
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  margin-bottom: 18px;
+}
+
+.hint {
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+  margin: 4px 0 12px;
+}
+
+.mono {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.status {
+  min-height: 1.2em;
+  margin: 8px 0 0;
+  color: var(--ink-dim);
+}
+
+.status.ok { color: var(--ok); }
+.status.err { color: var(--err); }
+
+/* ---------- Index : familles et pages ---------- */
+
+.famille {
+  margin-bottom: 16px;
+}
+
+.famille-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: var(--ink-dim);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.pages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.page {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 10px 8px;
+  text-align: center;
+  cursor: pointer;
+  min-height: 64px;
+  font-size: 0.8rem;
+}
+
+.page .pid {
+  display: block;
+  font-weight: 700;
+  color: var(--gold);
+  font-size: 0.9rem;
+}
+
+.page .pname {
+  display: block;
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+  margin-top: 2px;
+  line-height: 1.25;
+}
+
+.page:not(:disabled):hover {
+  border-color: var(--gold);
+}
+
+.page:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.page.locked {
+  background: repeating-linear-gradient(45deg, var(--panel-2), var(--panel-2) 6px, #141730 6px, #141730 12px);
+  color: var(--ink-dim);
+}
+
+.page.mastered {
+  border-color: var(--gold);
+}
+
+.page.mastered .pid::after {
+  content: " ✦";
+  color: var(--gold);
+}
+
+/* ---------- Session ---------- */
+
+.session-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.session-head h2 {
+  flex: 1;
+  margin: 0;
+}
+
+.engine-tag {
+  color: var(--ink-dim);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.7rem;
+}
+
+.board {
+  display: grid;
+  gap: 6px;
+  justify-content: center;
+  margin: 12px 0;
+}
+
+.tile {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1.05rem;
+  background: var(--panel-2);
+  padding: 0;
+}
+
+.tile.num { color: var(--ink); }
+.tile.op {
+  color: var(--gold);
+  background: #1d2140;
+  font-size: 1.25rem;
+}
+.tile.result {
+  color: #10132a;
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.tile.empty {
+  background: transparent;
+  border-style: dashed;
+  color: var(--ink-dim);
+}
+
+button.tile:not(:disabled):hover {
+  border-color: var(--gold);
+}
+
+button.tile:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hud {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+
+.hud-item {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  color: var(--ink-dim);
+}
+
+.hud-item b {
+  color: var(--ink);
+  margin-left: 6px;
+  font-size: 0.92rem;
+}
+
+/* ---------- Boutons ---------- */
+
+button {
+  font: inherit;
+  border-radius: 10px;
+  border: 1px solid var(--gold);
+  background: var(--gold);
+  color: #10132a;
+  font-weight: 700;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--gold);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* ---------- Pied ---------- */
+
+/* ---------- Pied ---------- */
+
+.saga-chapter {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.saga-chapter-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.saga-chapter-head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.saga-chapter-sub {
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+.saga-levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+}
+
+.saga-level {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 8px 6px;
+  text-align: center;
+  min-height: 56px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 0.76rem;
+}
+
+.saga-level.mastered {
+  border-color: var(--gold);
+  background: #1d2140;
+}
+
+.saga-level.open {
+  border-color: var(--ok);
+}
+
+.saga-level.locked {
+  border-color: var(--sealed);
+  background: repeating-linear-gradient(45deg, var(--panel-2), var(--panel-2) 5px, #141730 5px, #141730 10px);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.saga-lv-name {
+  display: block;
+  font-weight: 700;
+  color: var(--gold);
+  font-size: 0.82rem;
+}
+
+.saga-lv-stars {
+  display: block;
+  color: var(--gold);
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+}
+
+.saga-lab {
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.grimoire-foot {
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: 0.72rem;
+  margin-top: 26px;
+}
+
+/* ---------- Momo / Maggeek : coaching (M19, lecture seule) ---------- */
+
+.hint-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0 4px;
+}
+
+.momo-panel {
+  background: var(--panel-2);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin: 8px 0 4px;
+  list-style: none;
+}
+
+.momo-panel[hidden] {
+  display: none;
+}
+
+.momo-panel:empty {
+  display: none;
+}
+
+.momo-hint-line {
+  font-size: 0.82rem;
+  color: var(--ink);
+  padding: 2px 0;
+}
+
+.momo-hint-line::before {
+  content: "⋯ ";
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.momo-fact {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.68rem;
+  color: var(--ink-dim);
+  margin-left: 6px;
+}
+
+.momo-verified {
+  border-color: var(--ok);
+}
+
+.momo-panel.momo-verified {
+  border-style: solid;
+}
+
+.momo-fallback {
+  color: var(--ink-dim);
+  font-style: italic;
+}

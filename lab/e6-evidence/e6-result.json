@@ -1,0 +1,118 @@
+{
+  "scenario": "compose → play → solved → seal → fragments → reload (Chrome headless réel)",
+  "evidence": "E6",
+  "assertions": [
+    {
+      "name": "S1 · badge Résonance passe DORMANT → BOUND (|G|=2)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S1 · forge acceptée (message ok)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S1 · grille composée rendue (4 cellules)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S1 · le moteur offre des coups",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S2 · session composée RÉSOLUE par l'UI (solved=OUI ✦)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S2 · 4 coups joués (réserve 2×2 pleine)",
+      "expected": 4,
+      "actual": 4,
+      "pass": true
+    },
+    {
+      "name": "S2 · Résonance → RESONANT (COMPOSED puis COMPLETED)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S3 · Sceau forgé MATHIC-CHAL-1:* depuis la spec composée",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · catalogue complet affiché (10 fragments)",
+      "expected": 10,
+      "actual": 10,
+      "pass": true
+    },
+    {
+      "name": "S4 · 5 fragments débloqués par la chaîne réelle",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · stockage mathic.knowledge.v1 écrit",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · LORE_ALJABR_001 verrouillé (seal après solve → ordre non satisfait)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S5 · verifySeal accepte le Sceau in-browser",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S5 · import → nouvelle session jouable non résolue",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S6 · reload → 5 fragments restaurés depuis mathic.knowledge.v1",
+      "expected": 5,
+      "actual": 5,
+      "pass": true
+    },
+    {
+      "name": "S6 · aucun doublon après reload",
+      "expected": 5,
+      "actual": 5,
+      "pass": true
+    },
+    {
+      "name": "S6 · payload de stockage = tableau d'ids (schéma v1)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E6 · zéro erreur console/exception sur toute la session",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    }
+  ],
+  "passed": 18,
+  "failed": 0,
+  "consoleErrors": [],
+  "status": "E6 PROVEN"
+}
