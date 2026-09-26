@@ -1,0 +1,67 @@
+{
+  "name": "MATHIC 1.0",
+  "version": "1.0.0",
+  "revision": "g13fc612",
+  "buildDate": "2026-09-26T01:32:09Z",
+  "git": {
+    "branch": "kali/v5-gameplay-lab",
+    "commit": "13fc612a85dfbdf1d325ba79b94d8d8b183b7ce7",
+    "describe": "MAIN-V4-POST-PR3-65-g13fc612"
+  },
+  "targets": {
+    "pwa": {
+      "grimoire": {
+        "dir": "dist-grimoire/",
+        "files": {
+          "index.html": "de8b3360846559cd6fcf9664609ad372600f8f731a0d5808e4c4bc55f7dbf14e",
+          "grimoire.css": "4783560a020ab1d2f21b66ca5f9a2e9d2b4bc1fd1c75e794f512b3450b005b00",
+          "grimoire.js": "d11ab440702f6914a8340b2adc7805c3cdf0429cfc28b1c6bd733fafc576db0b",
+          "manifest.webmanifest": "b7a2e7e45bad94b411525aa1949f2abcd7a9491e0b49decd4ee24872c15294ee",
+          "sw.js": "4783560a020ab1d2f21b66ca5f9a2e9d2b4bc1fd1c75e794f512b3450b005b00",
+          "icons/icon-192.png": "fc6d7b499b4d9ba2b5be9652dffeac9557deef172545114621cd1cef3eacd43b",
+          "icons/icon-512.png": "132fd0ba0ddfabf5bd5ff18695f307b230fd9c24fa0f075de6b9b1d8426441ee"
+        },
+        "e6": "lab/e6-pwa-proof.mjs — 17/17 assertions pass, 0 console errors"
+      },
+      "atelier": {
+        "dir": "dist-atelier/",
+        "files": {
+          "index.html": "8a2d6bc307a7664b296279fa8e3e26691d0c63c9f555a482250b7e80254ab90a",
+          "atelier.css": "3a3a84ec9cd03123d7e9fced950655cc1ff81ca9f3d501ba2e8a96db63c25fc5",
+          "atelier.js": "e158398564b166b508c5702651a5983cf13b9830509d05b15a2d2a720f9f0edc",
+          "manifest.webmanifest": "2585d16f454cbf77fd04d9bbbb9ebbc3732cdcf8928c20f494fd6ce3a65be58e",
+          "sw.js": "a207e4249c218a1e1147e955a07c4bfd1818f1d5749aa9ab256fb98e1bf2c122",
+          "icons/icon-192.png": "fc6d7b499b4d9ba2b5be9652dffeac9557deef172545114621cd1cef3eacd43b",
+          "icons/icon-512.png": "132fd0ba0ddfabf5bd5ff18695f307b230fd9c24fa0f075de6b9b1d8426441ee"
+        },
+        "e6": "lab/e6-atelier-proof.mjs — 24/24 assertions pass, 0 console errors"
+      }
+    },
+    "android": {
+      "debug": {
+        "apk": "android/app/build/outputs/apk/release/app-release-unsigned.apk",
+        "sha256": "a87b9e654e23e9119aee7a5a905d8312fe3d191414982f15cfe313e12afab773",
+        "size": 4513552,
+        "verified": true
+      },
+      "release": {
+        "apk": "android/app/build/outputs/apk/release/app-release.apk",
+        "sha256": "431f62ee90e8d509c4116e7270a1fc2846811823f792b921b82f9fc750c80fdd",
+        "size": 3401181,
+        "signature": "APK Signature Scheme v2: true",
+        "verified": true
+      },
+      "package": "com.mathic.game",
+      "versionCode": 1,
+      "versionName": "1.0",
+      "sdkVersion": "24",
+      "targetSdkVersion": "36"
+    }
+  },
+  "verification": {
+    "tests": "487/487 pass (npm test)",
+    "playtest": "50/50 puzzles (Perfect Move mode)",
+    "e6_pwa": "17/17 pass, 0 console errors",
+    "e6_atelier": "24/24 pass, 0 console errors"
+  }
+}

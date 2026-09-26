@@ -13,7 +13,11 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-b1
+dist-atelier
+dist-grimoire
 dist-ssr
+artifacts/
 *.local
 
 # Certificats locaux (auto-signés, jamais commités)

@@ -1,0 +1,117 @@
+{
+  "scenario": "M20 PWA : manifest standalone + SW activé + cache offline + gameplay offline sans erreur (Chrome headless réel, dist-grimoire)",
+  "evidence": "E6 (M20 PWA)",
+  "invariants": {
+    "SW cache-first": "l'asset de navigation est disponible hors-ligne via le cache",
+    "manifest installability": "display=standalone + icônes + start_url",
+    "haptics disponibles": "Vibration API exposée, hooks gameplay injectés"
+  },
+  "assertions": [
+    {
+      "name": "S0 · link[rel=manifest] présent",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S0 · meta viewport optimisé mobile (width=device-width)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S0 · apple-touch-icon présent",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S0 · serviceWorker navigable",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S0 · Vibration API disponible (haptics)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S1 · Service Worker enregistré (scriptURL contient sw.js)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S1 · SW state = activated",
+      "expected": "activated",
+      "actual": "activated",
+      "pass": true
+    },
+    {
+      "name": "S2 · manifest fetchable + lisible",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S2 · display = standalone",
+      "expected": "standalone",
+      "actual": "standalone",
+      "pass": true
+    },
+    {
+      "name": "S2 · manifest ≥ 2 icônes",
+      "expected": ">=2",
+      "actual": 2,
+      "pass": true
+    },
+    {
+      "name": "S3 · caches Cache API présents (prêt offline)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · index.html mis en cache",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · grimoire.css mis en cache",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · grimoire.js mis en cache",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S5 · navigation offline réussit (cache-first)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S6 · gameplay offline complet (save écrite)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E6 · zéro erreur console/exception pendant PWA E6",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    }
+  ],
+  "passed": 17,
+  "failed": 0,
+  "consoleErrors": [],
+  "status": "E6 PROVEN"
+}

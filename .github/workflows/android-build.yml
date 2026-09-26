@@ -2,7 +2,7 @@ name: build-android
 
 on:
   push:
-    branches: [main]
+    branches: [main, "kali/*"]
   workflow_dispatch:
 
 concurrency:
@@ -46,9 +46,36 @@ jobs:
         working-directory: ./android
         run: bash ./gradlew assembleDebug
 
+      - name: Generate Release Build Manifest
+        run: |
+          apk_path="android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ -f "$apk_path" ]; then
+            sha256=$(sha256sum "$apk_path" | awk '{print $1}')
+            commit_sha=${GITHUB_SHA}
+            branch_name=${GITHUB_REF#refs/heads/}
+            
+            cat <<EOF > release-build-manifest.json
+          {
+            "commit": "$commit_sha",
+            "branch": "$branch_name",
+            "package": "com.mathic.game",
+            "versionName": "1.0",
+            "versionCode": 1,
+            "artifact": "app-debug.apk",
+            "sha256": "$sha256",
+            "buildType": "debug"
+          }
+          EOF
+          else
+            echo "APK not found!"
+            exit 1
+          fi
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MATHIC-Android-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: mathic-android-e3
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            release-build-manifest.json
           if-no-files-found: error

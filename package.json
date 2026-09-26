@@ -6,14 +6,19 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:b1": "vite build --config vite.b1.config.mjs",
+    "build:atelier": "vite build --config vite.atelier.config.mjs",
+    "build:grimoire": "vite build --config vite.grimoire.config.mjs",
+    "seal:reproducibility": "node scripts/seal-reproducibility.mjs",
     "preview": "vite preview",
     "test": "node --test && node tests/playtest-puzzle.mjs",
     "test:runtime": "node tests/runtime/game-adapter.test.mjs && node tests/runtime/input-command.test.mjs",
     "serve:https": "node scripts/https-server.mjs",
     "audit:size": "node scripts/audit-size.mjs",
+    "simulate:adaptive": "node scripts/simulate-adaptive-progression.mjs",
     "gen:icons": "node scripts/gen-icons.mjs",
     "gen:android": "node scripts/generate-android-icons.mjs",
-    "build:android": "vite build && npx cap copy android",
+    "build:android": "npm run build:grimoire && npx cap copy android",
     "android:sync": "npx cap sync android"
   },
   "devDependencies": {

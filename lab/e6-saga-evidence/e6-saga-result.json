@@ -1,0 +1,117 @@
+{
+  "scenario": "Saga : save vierge → ouvrir vue Saga → N1 OUVERT/0★ → jouer N1 (2+3) → résolu → retour Saga → N1 MAÎTRISÉ/★★★ → RELOAD stable ; projection ≠ mutation (Chrome headless réel, dist-grimoire)",
+  "evidence": "E6 (G18-04/G18-05)",
+  "invariants": {
+    "projection ≠ mutation": "ré-ouvrir la vue Saga n'écrit jamais mathic.save.v1",
+    "projection ≠ progression engine": "la Saga ne calcule ni verrouillage ni markCompleted",
+    "projection ≠ scoring engine": "les étoiles sont lues du save, jamais inventées"
+  },
+  "assertions": [
+    {
+      "name": "S0 · Index chargé (save vierge, profil frais)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S1 · vue Saga affichée (projection = rendu exploitable)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S1 · 6 chapitres (W1..W6)",
+      "expected": 6,
+      "actual": 6,
+      "pass": true
+    },
+    {
+      "name": "S1 · N1 OUVERT — état dérivé du save vierge",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S1 · N1 = 0 étoile (☆☆☆)",
+      "expected": "☆☆☆",
+      "actual": "☆☆☆",
+      "pass": true
+    },
+    {
+      "name": "S2 · N1 monté en session depuis la vue Saga",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S2 · moteur = formules",
+      "expected": "formules",
+      "actual": "formules",
+      "pass": true
+    },
+    {
+      "name": "S2 · plateau N1 = 3 tuiles réelles",
+      "expected": 3,
+      "actual": 3,
+      "pass": true
+    },
+    {
+      "name": "S3 · N1 résolu par clics réels (2 + 3 = 5)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S3 · victoire enregivée (wins=1) — markCompleted DÉLÉGUÉ",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · N1 MAÎTRISÉ dans la Saga après victoire réelle",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · N1 = 3 étoiles (★★★) — projection dérivée",
+      "expected": "★★★",
+      "actual": "★★★",
+      "pass": true
+    },
+    {
+      "name": "S4 · totaux reflètent 1 page scellée / 3 étoiles dérivées (3‣123, 1‣41)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S5 · PROJECTION ≠ MUTATION — ré-ouvrir la Saga n'écrit PAS mathic.save.v1",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S6 · RELOAD — N1 toujours MAÎTRISÉ",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S6 · RELOAD — étoiles stables (★★★)",
+      "expected": "★★★",
+      "actual": "★★★",
+      "pass": true
+    },
+    {
+      "name": "E6 · zéro erreur console/exception sur toute la boucle Saga",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    }
+  ],
+  "passed": 17,
+  "failed": 0,
+  "consoleErrors": [],
+  "status": "E6 PROVEN"
+}
