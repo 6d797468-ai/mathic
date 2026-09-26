@@ -19,11 +19,17 @@ import { WITNESS_VERSION } from "../v5/rules/solvability-witness.mjs";
  * @returns {string} fingerprint hex 16 chars
  */
 export function computeV5ContentFingerprint(v5Spec) {
-  const canonSpec = JSON.stringify(v5Spec, (key, value) => {
-    if (key === "") return Object.keys(value).sort().reduce((acc, k) => { acc[k] = value[k]; return acc; }, {});
-    return value;
-  });
-  const payload = `${canonSpec}|${SEAL_RULE_VERSION}|${WITNESS_VERSION}`;
+  // Deep canonicalization: recursively sort all object keys
+  function deepCanonicalize(obj) {
+    if (obj === null || typeof obj !== "object") return obj;
+    if (Array.isArray(obj)) return obj.map(deepCanonicalize);
+    return Object.keys(obj).sort().reduce((acc, k) => {
+      acc[k] = deepCanonicalize(obj[k]);
+      return acc;
+    }, {});
+  }
+  const canonSpec = JSON.stringify(deepCanonicalize(v5Spec));
+  const payload = canonSpec + "|" + SEAL_RULE_VERSION + "|" + WITNESS_VERSION;
   let hash = 0xcbf29ce484222325n;
   const prime = 0x100000001b3n;
   for (let i = 0; i < payload.length; i++) {

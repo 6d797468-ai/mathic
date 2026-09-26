@@ -63,12 +63,17 @@ function fnv1a64(str) {
  * est évité en utilisant une fonction replacer qui ne trie que le niveau racine.
  */
 export function computeFingerprint(spec) {
-  // Replacer qui ne trie que les clés du niveau racine
-  const canonSpec = JSON.stringify(spec, (key, value) => {
-    if (key === "") return Object.keys(value).sort().reduce((acc, k) => { acc[k] = value[k]; return acc; }, {});
-    return value;
-  });
-  const payload = `${canonSpec}|${SEAL_RULE_VERSION}|${WITNESS_VERSION}`;
+  // Deep canonicalization: recursively sort all object keys
+  function deepCanonicalize(obj) {
+    if (obj === null || typeof obj !== "object") return obj;
+    if (Array.isArray(obj)) return obj.map(deepCanonicalize);
+    return Object.keys(obj).sort().reduce((acc, k) => {
+      acc[k] = deepCanonicalize(obj[k]);
+      return acc;
+    }, {});
+  }
+  const canonSpec = JSON.stringify(deepCanonicalize(spec));
+  const payload = canonSpec + "|" + SEAL_RULE_VERSION + "|" + WITNESS_VERSION;
   return fnv1a64(payload);
 }
 
