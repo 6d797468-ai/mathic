@@ -1,0 +1,634 @@
+:root {
+  --bg: #0b0e1a;
+  --panel: #141828;
+  --line: #232a3f;
+  --line-soft: #1c2233;
+  --gold: #ffb03a;
+  --gold-soft: #8a6a2a;
+  --violet: #8b5cf6;
+  --text: #e8eaf2;
+  --muted: #8b91a7;
+  --num: #3d8bff;
+  --op: #ffb03a;
+  --res: #4ade80;
+  --warn: #ff5c5c;
+  --chip: #1c2233;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(139, 92, 246, 0.14), transparent 60%),
+    radial-gradient(900px 500px at -10% 0%, rgba(255, 176, 58, 0.08), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+main {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: calc(14px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+}
+
+header h1 {
+  font-size: 24px;
+  letter-spacing: 1px;
+}
+
+header h1 .seal-badge {
+  color: var(--gold);
+  font-size: 18px;
+}
+
+header .name {
+  font-size: 15px;
+  color: var(--text);
+  margin-top: 2px;
+  font-family: var(--mono);
+}
+
+header .tagline {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panel h2 {
+  font-size: 13px;
+  letter-spacing: 0.8px;
+  color: var(--gold);
+  font-family: var(--mono);
+  text-transform: uppercase;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset-row button {
+  font-size: 12px;
+  font-family: var(--mono);
+}
+
+.board {
+  display: grid;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.cell {
+  min-width: 56px;
+  min-height: 56px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--chip);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.cell.empty {
+  color: var(--muted);
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+.cell.fill {
+  color: var(--num);
+  border-color: var(--num);
+  cursor: pointer;
+}
+
+.cell.fill:disabled {
+  color: var(--text);
+  border-color: var(--line-soft);
+  background: var(--chip);
+  cursor: default;
+  opacity: 0.55;
+}
+
+.cell.target {
+  border-color: var(--res);
+  color: var(--res);
+}
+
+.hud {
+  display: flex;
+  justify-content: space-around;
+  background: var(--chip);
+  border-radius: 10px;
+  padding: 8px 6px;
+}
+
+.hud-item {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.hud-item b {
+  display: block;
+  font-size: 17px;
+  color: var(--text);
+}
+
+.status {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.status.ok {
+  color: var(--res);
+}
+
+.status.err {
+  color: var(--warn);
+}
+
+.mono {
+  font-family: var(--mono);
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.row button {
+  flex: 1;
+}
+
+button {
+  background: var(--gold);
+  color: #171206;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  background: var(--line-soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: var(--chip);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+#seal-out,
+#seal-in,
+#verify-out {
+  width: 100%;
+  font-size: 11px;
+  word-break: break-all;
+  padding: 10px;
+  border-radius: 8px;
+  background: #0a0d16;
+  border: 1px solid var(--line);
+  color: var(--num);
+  white-space: pre-wrap;
+}
+
+#seal-in {
+  color: var(--text);
+  resize: vertical;
+  min-height: 76px;
+}
+
+#seal-in.invalid {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+#seal-in.valid {
+  border-color: var(--res);
+}
+
+#verify-out {
+  color: var(--muted);
+}
+
+#verify-out.ok {
+  color: var(--res);
+}
+
+#verify-out.err {
+  color: var(--warn);
+}
+
+.foot {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.7;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+.legend {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+/* ── Sablier de Chronos (UI uniquement — aucun effet moteur) ─────────────── */
+
+.timeline {
+  padding: 4px 0;
+}
+
+.rail {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--chip);
+  border: 1px solid var(--line-soft);
+  overflow: hidden;
+}
+
+.curve {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--gold-soft), var(--gold));
+  border-radius: 3px;
+  transition: width 0.25s ease;
+}
+
+.readout {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+.readout b {
+  color: var(--gold);
+}
+
+#sablier[data-mode="history"] .curve {
+  background: linear-gradient(90deg, var(--violet), var(--gold));
+}
+
+/* Filtre visuel "mémoire" : sépia/histoire quand on n'est plus au présent.
+   Strictement UI — l'état affiché reste le getState() du replay réel. */
+body.rewound .board {
+  filter: sepia(0.55) saturate(0.8);
+  transition: filter 0.3s ease;
+}
+
+#sablier[data-mode="history"] {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.25);
+}
+
+#sablier[data-mode="present"] {
+  border-color: var(--line);
+}
+
+body.rewound .status.rewound {
+  color: var(--gold);
+}
+
+/* ── Oculus d'Analyse (UI uniquement — données du replay réel, aucune refonte) ─ */
+
+.oculus-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(5, 8, 16, 0.82);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.oculus-card {
+  width: 100%;
+  max-width: 460px;
+  max-height: 84vh;
+  overflow: auto;
+  border-color: var(--violet);
+}
+
+.oculus-card h2 {
+  color: var(--violet);
+}
+
+.oculus-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+button.icon {
+  background: none;
+  color: var(--muted);
+  border: none;
+  font-size: 18px;
+  padding: 0;
+}
+
+.oculus-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.oc-cursor,
+.oc-note,
+.oc-event,
+.oc-fact {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.oc-result {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.oc-result.ok {
+  color: var(--res);
+}
+
+.oc-result.err {
+  color: var(--warn);
+}
+
+.oc-result.warn {
+  color: var(--gold);
+}
+
+.oc-lines {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--chip);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: var(--mono);
+}
+
+.oc-lines li b {
+  color: var(--gold);
+}
+
+/* Valeurs « écartées par la loi » : le moteur ne les offre pas à cette case.
+   Clic = analyse (jamais de coup : aucune mutation possible depuis une case). */
+.obs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.cellbtn.obs {
+  background: var(--line-soft);
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  font-size: 11px;
+  padding: 2px 5px;
+  border-radius: 6px;
+  min-width: 26px;
+  height: 22px;
+}
+
+/* ── Marges de Maggeek (M15) — fragments de savoir, encre dorée ─────────── */
+
+.fragments {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.frag {
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.frag.on {
+  border-color: rgba(255, 176, 58, 0.45);
+  background: linear-gradient(180deg, rgba(255, 176, 58, 0.07), rgba(139, 92, 246, 0.05) 70%), var(--chip);
+}
+
+.frag .frag-locked,
+.frag summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gold);
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  list-style: none;
+}
+
+.frag.off .frag-locked {
+  color: var(--muted);
+  font-weight: 400;
+  cursor: default;
+}
+
+.frag-fact {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.frag-body {
+  font-size: 12px;
+  color: var(--text);
+  font-style: italic;
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+/* ── Symbiote des Gardiens (M16) — Guardian Composition Layer ────────── */
+
+.badge-lab {
+  display: inline-block;
+  font-size: 10px;
+  font-family: var(--mono);
+  background: rgba(139, 92, 246, 0.2);
+  color: var(--violet);
+  border: 1px solid var(--violet);
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.8px;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.guardians-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.guardian-card {
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  user-select: none;
+}
+
+.guardian-card:hover {
+  border-color: var(--gold-soft);
+}
+
+.guardian-card.active {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, rgba(255, 176, 58, 0.12), rgba(139, 92, 246, 0.08));
+}
+
+.guardian-card .g-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.guardian-card .g-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.guardian-card.active .g-name {
+  color: var(--gold);
+}
+
+.guardian-card .g-op {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--op);
+  background: var(--line-soft);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.guardian-card .g-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+
+.symbiote-resonance {
+  background: var(--line-soft);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.symbiote-resonance .resonance-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resonance-state {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--violet);
+  letter-spacing: 0.5px;
+}
+
+.resonance-state[data-state="AWAKENED"] {
+  color: var(--num);
+}
+
+.resonance-state[data-state="BOUND"] {
+  color: var(--gold);
+}
+
+.resonance-state[data-state="RESONANT"] {
+  color: var(--res);
+}
+
+.resonance-state[data-state="MASTERED"] {
+  color: #f43f5e;
+}
+
+.resonance-desc {
+  color: var(--text);
+  font-size: 12px;
+}
+
+#symbiote-out.ok {
+  color: var(--res);
+}
+
+#symbiote-out.err {
+  color: var(--warn);
+}

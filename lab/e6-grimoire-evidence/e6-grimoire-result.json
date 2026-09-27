@@ -1,0 +1,172 @@
+{
+  "scenario": "Grimoire : ouvrir → choisir → jouer → résoudre → récompense → progression → suivant → lab → reload (Chrome headless réel)",
+  "evidence": "E6 (G17-04)",
+  "assertions": [
+    {
+      "name": "S1 · vue Index visible au démarrage",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S1 · deux familles (Campagne + Laboratoire)",
+      "expected": 2,
+      "actual": 2,
+      "pass": true
+    },
+    {
+      "name": "S1 · N1 ouverte (activée, non hachurée)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S1 · N2 scellée (désactivée + hachurée) — état dérivé de mathic.save.v1",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S2 · session montée sur clic réel",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S2 · page N1",
+      "expected": "N1",
+      "actual": "N1",
+      "pass": true
+    },
+    {
+      "name": "S2 · moteur affiché = formules (b1 via seam)",
+      "expected": "formules",
+      "actual": "formules",
+      "pass": true
+    },
+    {
+      "name": "S2 · plateau N1 = 3 tuiles réelles du niveau",
+      "expected": 3,
+      "actual": 3,
+      "pass": true
+    },
+    {
+      "name": "S3 · rappel de sélection visible (« Formule : 2 + »)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S3 · le 3e clic soumet la formule → vue Résolution",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · page scellée affichée",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · N2 débloquée par la récompense (markCompleted délégué)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · victoire enregistrée (wins=1)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S4 · bouton « Tourner la page » actif vers N2",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S5 · N2 montée via next() (b1 réel, échelle LADDER)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S6 · N1 marquée MASTERED (dorée) après victoire réelle",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S6 · N2 désormais ouverte dans l'index",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S7 · page lab ouverte (moteur = grilles, jamais verrouillée)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S7 · session lab résolue par clics sur les coups OFFERTS uniquement",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S7 · savoir écrit dans mathic.knowledge.v1 (LORE_ATELIER_001)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S8 · mathic.save.v1 inchangé par le chemin lab (I-5 en conditions réelles)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S9 · index restauré après reload",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S9 · N1 toujours MASTERED après reload",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S9 · N2 toujours ouverte après reload",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S9 · savoir restauré, sans doublon",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "S9 · persistance du savoir visible (mode persistent)",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    },
+    {
+      "name": "E6 · zéro erreur console/exception sur toute la boucle",
+      "expected": true,
+      "actual": true,
+      "pass": true
+    }
+  ],
+  "passed": 27,
+  "failed": 0,
+  "consoleErrors": [],
+  "status": "E6 PROVEN"
+}
