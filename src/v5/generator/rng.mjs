@@ -2,23 +2,22 @@
  * MATHIC V5 — DETERMINISTIC RNG
  * ============================================================================
  * Générateur de nombres aléatoires déterministe pour la génération de niveaux.
- * Basé sur xoshiro256** (période 2^256 - 1, pas de dépendances).
- * 
- * Propriétés :
- * - Même seed → même séquence
- * - Pas de Math.random()
- * - Pas d'état global
- * - Rapide et de bonne qualité statistique
+ * Utilise un LCG 64-bit avec BigInt pour éviter les problèmes de précision JS.
  */
 
 export function createRng(seed) {
-  // Convert seed to 4x64-bit state using splitmix64
-  let state = splitmix64State(seed);
-  
+  // État interne 64-bit (BigInt)
+  let state = BigInt(seed >= 0 ? seed : (seed % 2n**64n + 2n**64n) % 2n**64n);
+
+  // Constantes LCG 64-bit (valeurs de Numerical Recipes)
+  const MULTIPLIER = 6364136223846793005n;  // 0x5DEECE66D * 2^32 + ...
+  const INCREMENT = 1442695040888963407n;   // 0xB504F333 * 2^32 + ...
+  const MODULUS = 2n ** 64n;
+
   return {
     next() {
-      const result = xoshiro256starstar(state);
-      return result;
+      state = (state * MULTIPLIER + INCREMENT) % (2n ** 64n);
+      return Number(state & 0xFFFFFFFFn); // Retourne 32 bits bas
     },
     nextInt(max) {
       if (max <= 0) return 0;
@@ -42,40 +41,13 @@ export function createRng(seed) {
       }
       return arr;
     },
-    // Pour reproduction exacte : retourne l'état interne
     getState() {
-      return [...state];
+      return state.toString();
     },
     setState(newState) {
-      state = [...newState];
+      state = BigInt(newState);
     }
   };
-}
-
-function splitmix64State(seed) {
-  let z = (seed + 0x9e3779b97f4a7c15) >>> 0;
-  const state = new Array(4);
-  for (let i = 0; i < 4; i++) {
-    z = (z + 0x9e3779b97f4a7c15) >>> 0;
-    let t = (z ^ (z >>> 30)) * 0xbf58476d1ce4e5b9;
-    t = (t ^ (t >>> 27)) * 0x94d049bb133111eb;
-    t = t ^ (t >>> 31);
-    state[i] = t >>> 0;
-  }
-  return state;
-}
-
-function xoshiro256starstar(state) {
-  const [s0, s1, s2, s3] = state;
-  const result = (s0 * 5) >>> 0;
-  const t = (s1 << 17) >>> 0;
-  state[2] ^= s0;
-  state[3] ^= s1;
-  state[1] ^= s2;
-  state[0] ^= s3;
-  state[2] = (state[2] ^ t) >>> 0;
-  state[3] = (state[3] >>> 45) | (state[3] << 19);
-  return result;
 }
 
 /**
@@ -84,19 +56,18 @@ function xoshiro256starstar(state) {
  * @returns {object} RNG instance
  */
 export function rngFromSeed(seed) {
-  let seedNum = typeof seed === "string" ? hashString(seed) : Number(seed);
-  if (!Number.isInteger(seedNum) || seedNum < 0) {
-    seedNum = Math.abs(Math.floor(seedNum)) || 1;
+  let seedNum;
+  if (typeof seed === "string") {
+    // Hash simple de la string
+    let hash = 0n;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash * 31n + BigInt(seed.charCodeAt(i))) & 0xFFFFFFFFFFFFFFFFn;
+    }
+    seed = Number(hash);
   }
-  return createRng(seedNum);
-}
-
-function hashString(str) {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0; // Convert to 32-bit integer
+  seed = Number(seed);
+  if (!Number.isInteger(seed) || seed < 0) {
+    seed = Math.abs(Math.floor(seed)) || 1;
   }
-  return Math.abs(hash) >>> 0;
+  return createRng(BigInt(seed >>> 0));
 }
